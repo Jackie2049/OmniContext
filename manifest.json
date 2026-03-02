@@ -38,5 +38,11 @@
     "16": "icons/icon.svg",
     "48": "icons/icon.svg",
     "128": "icons/icon.svg"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/platforms/*.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

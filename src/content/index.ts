@@ -1,6 +1,6 @@
 import { sessionStorage } from '../storage/session-storage';
 import { detectPlatform, extractSessionId, createMessageExtractor } from '../utils/extractor';
-import { startBatchCapture, pauseBatchCapture, resumeBatchCapture, cancelBatchCapture, isBatchCaptureRunning } from './batch-capture';
+import { startBatchCapture, pauseBatchCapture, resumeBatchCapture, cancelBatchCapture, isBatchCaptureRunning, getBatchCaptureProgress, setSelectedSessions } from './batch-capture';
 import type { Platform, Session, Message } from '../types';
 
 const DEBUG = false;  // Disable verbose logging
@@ -215,7 +215,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'BATCH_CAPTURE_STATUS') {
-    sendResponse({ running: isBatchCaptureRunning() });
+    sendResponse({
+      isRunning: isBatchCaptureRunning(),
+      progress: getBatchCaptureProgress()
+    });
+    return true;
+  }
+
+  if (message.type === 'BATCH_CAPTURE_SELECT_SESSIONS') {
+    setSelectedSessions(message.sessionIds || []);
+    sendResponse({ success: true });
     return true;
   }
 

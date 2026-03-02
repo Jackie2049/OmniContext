@@ -4,6 +4,78 @@
 
 ---
 
+## 2026-03-02 批量捕获完善与会话查看功能
+
+**摘要：** 修复批量捕获多项Bug，新增会话查看功能，优化整体UI体验
+
+**正文：**
+
+### 批量捕获功能完善
+1. **进度计数修复**
+   - 问题：显示 21/3 而非 2/3
+   - 原因：`captured` 变量累加所有历史捕获数
+   - 解决：使用正确的 `current` 变量显示进度
+
+2. **负数ETA修复**
+   - 问题：ETA显示 -75秒
+   - 解决：当 `remaining <= 0` 时返回 `undefined`
+
+3. **重复捕获Bug修复**
+   - 问题：同一session被多次捕获
+   - 原因：使用 `session.id` 判重，但捕获过程中id尚未生成
+   - 解决：改用 `preSessionId`（基于平台和标题生成的预ID）
+
+4. **消息级进度显示**
+   - 新增 `sessionMessagesTotal` 字段
+   - 显示格式：`正在处理 会话标题 (566条消息)`
+
+5. **Session选择对话框**
+   - 替代全量自动捕获
+   - 用户可勾选要捕获的会话
+   - 支持全选/取消全选
+
+### UI/UX优化
+1. **Popup高度修复**
+   - 问题：打开后只显示约1cm高度
+   - 解决：`min-height: 520px` + flexbox单层滚动
+
+2. **平台Logo图标**
+   - 移动SVG到 `icons/platforms/` 目录
+   - 使用 `chrome.runtime.getURL()` 加载
+   - 配置 `web_accessible_resources`
+
+3. **标签管理对话框**
+   - 替换原有的 `prompt()` 交互
+   - 支持勾选已有标签
+   - 支持创建新标签
+
+4. **删除模式优化**
+   - 删除进度可视化
+   - 全选/取消全选
+   - 批量删除确认
+
+### 会话查看功能
+- 点击session-info区域打开对话查看对话框
+- 消息气泡样式：用户蓝色边框，助手绿色边框
+- 显示角色标签和发送时间
+- 支持"复制全部"功能
+- 搜索关键词高亮显示
+- 悬停提示："点击查看完整对话"
+
+### 技术改进
+- `BatchCaptureProgress` 接口新增 `newSessions` 和 `updatedSessions`
+- `captureCurrentSession` 返回 `{ session, isNew, isUpdated, oldCount }`
+- CSS优化：cursor: pointer, hover背景色变化
+
+### 提交记录
+- 批量捕获进度修复
+- Session查看对话框
+- 平台Logo图标支持
+- 标签管理对话框
+- UI布局优化
+
+---
+
 ## 2026-02-28 元宝与Claude思考模式支持
 
 **摘要：** 完成元宝和Claude平台的思考模式开发，测试用例增至48个

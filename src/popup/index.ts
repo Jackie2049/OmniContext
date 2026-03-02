@@ -13,11 +13,20 @@ interface ExportData {
   sessionTags: Record<string, string[]>;
 }
 
-// Platform icons
+// Platform icons - use img tags with chrome.runtime.getURL
+function getPlatformIcon(platform: Platform): string {
+  const iconUrls: Record<Platform, string> = {
+    doubao: chrome.runtime.getURL('icons/platforms/doubao.svg'),
+    yuanbao: chrome.runtime.getURL('icons/platforms/yuanbao.svg'),
+    claude: chrome.runtime.getURL('icons/platforms/claude.svg'),
+  };
+  return `<img class="platform-logo ${platform}" src="${iconUrls[platform]}" width="16" height="16" alt="${formatPlatformName(platform)}">`;
+}
+
 const PLATFORM_ICONS: Record<Platform, string> = {
-  doubao: '🔴',
-  yuanbao: '🟡',
-  claude: '🟣',
+  doubao: getPlatformIcon('doubao'),
+  yuanbao: getPlatformIcon('yuanbao'),
+  claude: getPlatformIcon('claude'),
 };
 
 // DOM Elements
@@ -26,6 +35,7 @@ const currentPageEl = document.getElementById('current-page')!;
 const exportBtn = document.getElementById('export-btn')!;
 const importBtn = document.getElementById('import-btn')!;
 const refreshBtn = document.getElementById('refresh-btn')!;
+const manageBtn = document.getElementById('manage-btn')!;
 const toastEl = document.getElementById('toast')!;
 const searchInput = document.getElementById('search-input')! as HTMLInputElement;
 const searchClear = document.getElementById('search-clear')! as HTMLButtonElement;
@@ -34,6 +44,14 @@ const filterTags = document.getElementById('filter-tags')! as HTMLSelectElement;
 
 // Import dialog elements
 const importDialog = document.getElementById('import-dialog')!;
+
+// Session selection dialog elements
+const sessionSelectDialog = document.getElementById('session-select-dialog')!;
+const sessionSelectList = document.getElementById('session-select-list')!;
+const sessionSelectAll = document.getElementById('session-select-all')! as HTMLInputElement;
+const sessionSelectCount = document.getElementById('session-select-count')!;
+const sessionSelectCancelBtn = document.getElementById('session-select-cancel')! as HTMLButtonElement;
+const sessionSelectConfirmBtn = document.getElementById('session-select-confirm')! as HTMLButtonElement;
 const importFileInput = document.getElementById('import-file-input')! as HTMLInputElement;
 const importFilename = document.getElementById('import-filename')!;
 const importSessionCount = document.getElementById('import-session-count')!;
@@ -44,12 +62,38 @@ const importConfirm = document.getElementById('import-confirm')!;
 // Batch capture elements
 const batchCaptureSection = document.getElementById('batch-capture-section')!;
 const batchCaptureBtn = document.getElementById('batch-capture-btn')! as HTMLButtonElement;
+const batchScanning = document.getElementById('batch-scanning')!;
+const batchScanningPlatform = document.getElementById('batch-scan-platform')!;
+const batchScanningCount = batchScanning.querySelector('.batch-scanning-count strong')!;
+const batchScanCancelBtn = document.getElementById('batch-scan-cancel-btn')! as HTMLButtonElement;
 const batchProgress = document.getElementById('batch-progress')!;
 const batchProgressCount = document.getElementById('batch-progress-count')!;
 const batchProgressFill = document.getElementById('batch-progress-fill')!;
 const batchProgressTitle = document.getElementById('batch-progress-title')!;
-const batchCapturedCount = document.getElementById('batch-captured-count')!;
 const batchCancelBtn = document.getElementById('batch-cancel-btn')! as HTMLButtonElement;
+
+// Tag dialog elements
+const tagDialog = document.getElementById('tag-dialog')!;
+const tagDialogTitle = document.getElementById('tag-dialog-title')!;
+const tagList = document.getElementById('tag-list')!;
+const tagNewInput = document.getElementById('tag-new-input')! as HTMLInputElement;
+const tagAddBtn = document.getElementById('tag-add-btn')! as HTMLButtonElement;
+const tagCancelBtn = document.getElementById('tag-cancel')! as HTMLButtonElement;
+
+// Session view dialog elements
+const sessionViewDialog = document.getElementById('session-view-dialog')!;
+const sessionViewTitle = document.getElementById('session-view-title')!;
+const sessionViewMeta = document.getElementById('session-view-meta')!;
+const sessionViewMessages = document.getElementById('session-view-messages')!;
+const sessionViewCopyBtn = document.getElementById('session-view-copy')! as HTMLButtonElement;
+const sessionViewCloseBtn = document.getElementById('session-view-close')! as HTMLButtonElement;
+
+// Delete mode elements
+const deleteModeBar = document.getElementById('delete-mode-bar')!;
+const deleteSelectedCount = document.getElementById('delete-selected-count')!;
+const deleteSelectAllCheckbox = document.getElementById('delete-select-all-checkbox')! as HTMLInputElement;
+const deleteCancelBtn = document.getElementById('delete-cancel-btn')! as HTMLButtonElement;
+const deleteConfirmBtn = document.getElementById('delete-confirm-btn')! as HTMLButtonElement;
 
 // State
 let currentPlatform: Platform | null = null;
@@ -61,6 +105,18 @@ let pendingImportData: ExportData | null = null;
 let searchKeyword = '';
 let selectedPlatform: Platform | '' = '';
 let selectedTagIds: string[] = [];
+
+// Delete mode state
+let isDeleteMode = false;
+let selectedSessionIds = new Set<string>();
+
+// Batch capture state
+let isBatchCapturing = false;
+let discoveredSessions: Array<{ id: string; title: string; platform: string }> = [];
+let captureSelectedIds = new Set<string>();
+
+// Tag dialog state
+let currentTagSessionId: string | null = null;
 
 // Track collapsed state of each platform (persisted in session)
 const collapsedPlatforms = new Set<string>();
@@ -90,6 +146,19 @@ async function init() {
       } else {
         batchCaptureSection.style.display = 'none';
       }
+
+      // Check if batch capture is already running and restore state
+      if (tab.id) {
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, { type: 'BATCH_CAPTURE_STATUS' });
+          if (response?.isRunning && response?.progress) {
+            isBatchCapturing = true;
+            updateBatchCaptureProgress(response.progress);
+          }
+        } catch {
+          // Content script not ready or no capture running
+        }
+      }
     }
   } catch (e) {
     console.error('Failed to detect platform:', e);
@@ -114,11 +183,51 @@ async function init() {
   // Batch capture events
   batchCaptureBtn.addEventListener('click', handleBatchCaptureStart);
   batchCancelBtn.addEventListener('click', handleBatchCaptureCancel);
+  batchScanCancelBtn.addEventListener('click', handleBatchCaptureCancel);
+
+  // Delete mode events
+  manageBtn.addEventListener('click', toggleDeleteMode);
+  deleteCancelBtn.addEventListener('click', exitDeleteMode);
+  deleteConfirmBtn.addEventListener('click', handleDeleteSelected);
+  deleteSelectAllCheckbox.addEventListener('change', handleSelectAll);
+
+  // Session selection dialog events
+  sessionSelectAll.addEventListener('change', handleSessionSelectAll);
+  sessionSelectCancelBtn.addEventListener('click', handleSessionSelectCancel);
+  sessionSelectConfirmBtn.addEventListener('click', handleSessionSelectConfirm);
+  sessionSelectDialog.addEventListener('click', (e) => {
+    if (e.target === sessionSelectDialog) handleSessionSelectCancel();
+  });
+
+  // Tag dialog events
+  tagAddBtn.addEventListener('click', handleAddNewTag);
+  tagNewInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleAddNewTag();
+  });
+  tagCancelBtn.addEventListener('click', hideTagDialog);
+  tagDialog.addEventListener('click', (e) => {
+    if (e.target === tagDialog) hideTagDialog();
+  });
+
+  // Session view dialog events
+  sessionViewCopyBtn.addEventListener('click', handleSessionViewCopy);
+  sessionViewCloseBtn.addEventListener('click', hideSessionViewDialog);
+  sessionViewDialog.addEventListener('click', (e) => {
+    if (e.target === sessionViewDialog) hideSessionViewDialog();
+  });
 
   // Listen for batch capture progress from content script
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'BATCH_CAPTURE_PROGRESS') {
       updateBatchCaptureProgress(message.progress);
+      // Reload sessions when a new session is captured
+      if (message.progress.sessionJustCaptured) {
+        // 保存滚动位置，避免刷新时跳回顶部
+        const scrollPos = saveScrollPosition();
+        loadSessions().then(() => {
+          restoreScrollPosition(scrollPos);
+        });
+      }
     }
   });
 
@@ -188,9 +297,47 @@ async function loadSessions() {
   ).join('');
 
   const sessions = await sessionStorage.getAllSessions();
+  console.log('[OmniContext] Loaded sessions:', sessions.length);
   allSessions = sessions;
 
+  // Update debug info
+  updateDebugInfo(sessions.length);
+
   renderSessions();
+}
+
+// 保存滚动位置（用于批量捕获时刷新列表）
+function saveScrollPosition(): number {
+  return sessionListEl.scrollTop;
+}
+
+function restoreScrollPosition(position: number) {
+  sessionListEl.scrollTop = position;
+}
+
+async function updateDebugInfo(sessionCount: number) {
+  const debugInfo = document.getElementById('debug-info');
+  const debugSessions = document.getElementById('debug-sessions');
+  const debugStorage = document.getElementById('debug-storage');
+
+  if (!debugInfo || !debugSessions || !debugStorage) return;
+
+  // Show debug info
+  debugInfo.style.display = 'flex';
+  debugSessions.textContent = `会话: ${sessionCount}`;
+
+  // Get storage size
+  try {
+    chrome.storage.local.getBytesInUse('sessions', (bytes) => {
+      const kb = (bytes / 1024).toFixed(1);
+      const mb = (bytes / 1024 / 1024).toFixed(2);
+      debugStorage.textContent = bytes > 1024 * 1024
+        ? `存储: ${mb} MB`
+        : `存储: ${kb} KB`;
+    });
+  } catch {
+    debugStorage.textContent = '存储: -';
+  }
 }
 
 async function renderSessions() {
@@ -290,19 +437,37 @@ function renderSessionItemWithHighlight(session: Session, tags: Tag[]): string {
   // Highlight title if searching
   const titleHtml = highlightText(session.title, searchKeyword);
 
+  // Checkbox for delete mode
+  const checkboxHtml = isDeleteMode
+    ? `<input type="checkbox" class="session-checkbox" data-id="${session.id}" ${selectedSessionIds.has(session.id) ? 'checked' : ''}>`
+    : '';
+
+  // Selected class
+  const selectedClass = isDeleteMode && selectedSessionIds.has(session.id) ? 'selected-for-delete' : '';
+  const deleteModeClass = isDeleteMode ? 'delete-mode' : '';
+
+  // Hide action buttons in delete mode
+  const actionsHtml = isDeleteMode ? '' : `
+    <div class="session-actions">
+      <button class="btn-icon copy" title="复制上下文" data-action="copy">📋</button>
+      <button class="btn-icon tag-btn" title="管理标签" data-action="tags">🏷️</button>
+      <button class="btn-icon edit" title="编辑标题" data-action="edit">✏️</button>
+      <button class="btn-icon delete" title="删除" data-action="delete">🗑️</button>
+    </div>
+  `;
+
+  // Tooltip for session info (only in non-delete mode)
+  const infoTooltip = isDeleteMode ? '' : 'title="点击查看完整对话"';
+
   return `
-    <div class="session-item" data-id="${session.id}">
-      <div class="session-info">
+    <div class="session-item ${deleteModeClass} ${selectedClass}" data-id="${session.id}">
+      ${checkboxHtml}
+      <div class="session-info" ${infoTooltip}>
         <div class="session-title">${titleHtml}</div>
         <div class="session-tags">${tagsHtml}</div>
         <div class="session-meta">${date} · ${session.messageCount}条消息</div>
       </div>
-      <div class="session-actions">
-        <button class="btn-icon copy" title="复制上下文" data-action="copy">📋</button>
-        <button class="btn-icon tag-btn" title="管理标签" data-action="tags">🏷️</button>
-        <button class="btn-icon edit" title="编辑标题" data-action="edit">✏️</button>
-        <button class="btn-icon delete" title="删除" data-action="delete">🗑️</button>
-      </div>
+      ${actionsHtml}
     </div>
   `;
 }
@@ -313,11 +478,22 @@ function renderPlatformGroupWithHtml(platform: Platform, sessionHtmls: string[])
   const isCurrent = currentPlatform === platform;
   const isCollapsed = collapsedPlatforms.has(platform);
 
+  // 检查该平台下是否所有 session 都被选中
+  const platformSessions = allSessions.filter(s => s.platform === platform);
+  const allPlatformSelected = platformSessions.length > 0 &&
+    platformSessions.every(s => selectedSessionIds.has(s.id));
+  const somePlatformSelected = platformSessions.some(s => selectedSessionIds.has(s.id)) &&
+    !allPlatformSelected;
+
+  const checkboxChecked = allPlatformSelected ? 'checked' : '';
+  const checkboxIndeterminate = somePlatformSelected ? 'data-indeterminate="true"' : '';
+
   return `
     <div class="platform-group">
-      <div class="platform-header ${isCollapsed ? 'collapsed' : ''}" data-platform="${platform}">
+      <div class="platform-header ${isCollapsed ? 'collapsed' : ''} ${isDeleteMode ? 'delete-mode' : ''}" data-platform="${platform}">
+        ${isDeleteMode ? `<input type="checkbox" class="platform-checkbox" data-platform="${platform}" ${checkboxChecked} ${checkboxIndeterminate}>` : ''}
         ${icon} ${name}
-        ${isCurrent ? '<span style="margin-left: 8px; font-size: 10px; background: #1890ff; color: white; padding: 2px 6px; border-radius: 4px;">当前</span>' : ''}
+        ${isCurrent && !isDeleteMode ? '<span style="margin-left: 8px; font-size: 10px; background: #1890ff; color: white; padding: 2px 6px; border-radius: 4px;">当前平台</span>' : ''}
         <span class="platform-count">${sessionHtmls.length}个会话</span>
       </div>
       <div class="platform-sessions" style="display: ${isCollapsed ? 'none' : 'block'}">
@@ -372,26 +548,179 @@ function bindSessionEvents() {
   });
   });
 
-  // Platform header toggle
+  // Platform header toggle (and checkbox in delete mode)
   document.querySelectorAll('.platform-header').forEach(header => {
-    header.addEventListener('click', () => {
-    const platform = header.getAttribute('data-platform') as Platform;
-    header.classList.toggle('collapsed');
-    const isNowCollapsed = header.classList.contains('collapsed');
+    header.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
 
-    // Track collapsed state
-    if (isNowCollapsed) {
-    collapsedPlatforms.add(platform);
+      // 如果点击的是 platform checkbox，处理全选逻辑
+      if (target.classList.contains('platform-checkbox')) {
+        e.stopPropagation();
+        const platform = header.getAttribute('data-platform') as Platform;
+        handleSelectPlatform(platform);
+        return;
+      }
+
+      // 在删除模式下，点击整个 header 也可以选中平台
+      if (isDeleteMode) {
+        const platform = header.getAttribute('data-platform') as Platform;
+        handleSelectPlatform(platform);
+        return;
+      }
+
+      // 正常模式：折叠/展开
+      const platform = header.getAttribute('data-platform') as Platform;
+      header.classList.toggle('collapsed');
+      const isNowCollapsed = header.classList.contains('collapsed');
+
+      // Track collapsed state
+      if (isNowCollapsed) {
+        collapsedPlatforms.add(platform);
+      } else {
+        collapsedPlatforms.delete(platform);
+      }
+
+      const sessions = header.nextElementSibling as HTMLElement;
+      if (sessions) {
+        sessions.style.display = sessions.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  });
+
+  // Checkbox for delete mode
+  document.querySelectorAll('.session-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      const id = target.getAttribute('data-id');
+      if (id) {
+        if (target.checked) {
+          selectedSessionIds.add(id);
+        } else {
+          selectedSessionIds.delete(id);
+        }
+        updateDeleteSelectedCount();
+        // Update visual state
+        const item = target.closest('.session-item');
+        item?.classList.toggle('selected-for-delete', target.checked);
+      }
+    });
+  });
+
+  // Click on session-info to view conversation (not in delete mode)
+  document.querySelectorAll('.session-info').forEach(info => {
+    info.addEventListener('click', (e) => {
+      if (isDeleteMode) return;
+      const item = (e.target as HTMLElement).closest('.session-item');
+      const id = item?.getAttribute('data-id');
+      if (id) {
+        handleViewSession(id);
+      }
+    });
+  });
+}
+
+// ========== Delete Mode ==========
+
+function toggleDeleteMode() {
+  isDeleteMode = !isDeleteMode;
+  if (isDeleteMode) {
+    selectedSessionIds.clear();
+    deleteSelectAllCheckbox.checked = false;
+    deleteModeBar.style.display = 'flex';
+    manageBtn.textContent = '✖️ 取消';
+    manageBtn.classList.add('btn-danger');
   } else {
-    collapsedPlatforms.delete(platform);
+    exitDeleteMode();
+  }
+  renderSessions();
+}
+
+function exitDeleteMode() {
+  isDeleteMode = false;
+  selectedSessionIds.clear();
+  deleteSelectAllCheckbox.checked = false;
+  deleteModeBar.style.display = 'none';
+  manageBtn.textContent = '🗑️ 管理';
+  manageBtn.classList.remove('btn-danger');
+  renderSessions();
+}
+
+function updateDeleteSelectedCount() {
+  deleteSelectedCount.textContent = String(selectedSessionIds.size);
+  // Update select all checkbox state
+  deleteSelectAllCheckbox.checked = selectedSessionIds.size === allSessions.length && allSessions.length > 0;
+  deleteSelectAllCheckbox.indeterminate = selectedSessionIds.size > 0 && selectedSessionIds.size < allSessions.length;
+}
+
+function handleSelectAll() {
+  if (deleteSelectAllCheckbox.checked) {
+    // Select all sessions
+    allSessions.forEach(s => selectedSessionIds.add(s.id));
+  } else {
+    // Deselect all
+    selectedSessionIds.clear();
+  }
+  renderSessions();
+  updateDeleteSelectedCount();
+}
+
+function handleSelectPlatform(platform: Platform) {
+  // Toggle all sessions of this platform
+  const platformSessions = allSessions.filter(s => s.platform === platform);
+  const allSelected = platformSessions.every(s => selectedSessionIds.has(s.id));
+
+  if (allSelected) {
+    // Deselect all of this platform
+    platformSessions.forEach(s => selectedSessionIds.delete(s.id));
+  } else {
+    // Select all of this platform
+    platformSessions.forEach(s => selectedSessionIds.add(s.id));
+  }
+  renderSessions();
+  updateDeleteSelectedCount();
+}
+
+async function handleDeleteSelected() {
+  if (selectedSessionIds.size === 0) {
+    showToast('请先选择要删除的会话');
+    return;
   }
 
-    const sessions = header.nextElementSibling as HTMLElement;
-    if (sessions) {
-    sessions.style.display = sessions.style.display === 'none' ? 'block' : 'none';
+  const count = selectedSessionIds.size;
+  if (!confirm(`确定要删除选中的 ${count} 个会话吗？此操作不可恢复。`)) {
+    return;
+  }
+
+  // 禁用按钮并显示进度
+  deleteConfirmBtn.disabled = true;
+  deleteCancelBtn.disabled = true;
+  deleteConfirmBtn.textContent = '删除中...';
+
+  const total = count;
+  let deleted = 0;
+  const ids = Array.from(selectedSessionIds);
+
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    try {
+      await sessionStorage.deleteSession(id);
+      deleted++;
+      // 更新进度显示
+      deleteConfirmBtn.textContent = `删除中 ${deleted}/${total}`;
+      deleteSelectedCount.textContent = `${deleted}/${total}`;
+    } catch (err) {
+      console.error('Failed to delete session:', id, err);
     }
-  });
-  });
+  }
+
+  // 恢复按钮状态
+  deleteConfirmBtn.disabled = false;
+  deleteCancelBtn.disabled = false;
+  deleteConfirmBtn.textContent = '确认删除';
+
+  exitDeleteMode();
+  await loadSessions();
+  showToast(`已删除 ${deleted} 个会话`);
 }
 
 async function handleCopy(sessionId: string) {
@@ -434,45 +763,128 @@ async function handleManageTags(sessionId: string) {
   const session = await sessionStorage.getSession(sessionId);
   if (!session) return;
 
+  // Set current session info
+  currentTagSessionId = sessionId;
+
+  // Update dialog title
+  tagDialogTitle.textContent = `管理 "${session.title}" 的标签`;
+
+  // Clear input
+  tagNewInput.value = '';
+
+  // Render tag list
+  await renderTagList();
+
+  // Show dialog
+  tagDialog.style.display = 'flex';
+}
+
+async function renderTagList() {
+  if (!currentTagSessionId) return;
+
   // Get current tags for this session
-  const sessionTagIds = await tagStorage.getSessionTags(sessionId);
+  const sessionTagIds = await tagStorage.getSessionTags(currentTagSessionId);
   const allTagsList = await tagStorage.getAllTags();
 
-  // Show simple prompt-based UI for now
-  const options = allTagsList.map((tag, index) =>
-    `${index + 1}. ${tag.name} ${sessionTagIds.includes(tag.id) ? '(已添加)' : ''}`
-  ).join('\n');
+  if (allTagsList.length === 0) {
+    tagList.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center; color: #999;">暂无标签，请输入新标签名称创建</div>';
+    return;
+  }
 
-  const choice = prompt(
-    `管理 "${session.title}" 的标签:\n\n${options}\n\n输入编号添加/删除标签，或输入新标签名称创建：`
-  );
+  tagList.innerHTML = allTagsList.map(tag => {
+    const isChecked = sessionTagIds.includes(tag.id);
+    return `
+      <div class="tag-item ${isChecked ? 'checked' : ''}" data-tag-id="${tag.id}">
+        <input type="checkbox" ${isChecked ? 'checked' : ''}>
+        <span class="tag-item-name">${escapeHtml(tag.name)}</span>
+        <span class="tag-item-color" style="background: ${tag.color}"></span>
+      </div>
+    `;
+  }).join('');
 
-  if (!choice) return;
+  // Bind click events
+  tagList.querySelectorAll('.tag-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      // Don't toggle if clicking on the checkbox itself (it handles its own state)
+      if (target.tagName === 'INPUT') return;
 
-  const numChoice = parseInt(choice, 10);
-  if (!isNaN(numChoice) && numChoice > 0 && numChoice <= allTagsList.length) {
-    // Toggle existing tag
-    const selectedTag = allTagsList[numChoice - 1];
-    if (sessionTagIds.includes(selectedTag.id)) {
-      await tagStorage.removeTagFromSession(sessionId, selectedTag.id);
-      showToast(`已移除标签: ${selectedTag.name}`);
-    } else {
-      await tagStorage.addTagToSession(sessionId, selectedTag.id);
-      showToast(`已添加标签: ${selectedTag.name}`);
-    }
+      const tagId = item.getAttribute('data-tag-id');
+      if (!tagId || !currentTagSessionId) return;
+
+      const checkbox = item.querySelector('input') as HTMLInputElement;
+      const newChecked = !checkbox.checked;
+      checkbox.checked = newChecked;
+      item.classList.toggle('checked', newChecked);
+
+      // Update storage
+      if (newChecked) {
+        await tagStorage.addTagToSession(currentTagSessionId, tagId);
+      } else {
+        await tagStorage.removeTagFromSession(currentTagSessionId, tagId);
+      }
+
+      // Refresh session list
+      await loadSessions();
+    });
+
+    // Also handle checkbox change directly
+    const checkbox = item.querySelector('input') as HTMLInputElement;
+    checkbox.addEventListener('change', async () => {
+      const tagId = item.getAttribute('data-tag-id');
+      if (!tagId || !currentTagSessionId) return;
+
+      item.classList.toggle('checked', checkbox.checked);
+
+      if (checkbox.checked) {
+        await tagStorage.addTagToSession(currentTagSessionId, tagId);
+      } else {
+        await tagStorage.removeTagFromSession(currentTagSessionId, tagId);
+      }
+
+      // Refresh session list
+      await loadSessions();
+    });
+  });
+}
+
+async function handleAddNewTag() {
+  const tagName = tagNewInput.value.trim();
+  if (!tagName || !currentTagSessionId) return;
+
+  // Check if tag already exists
+  const allTags = await tagStorage.getAllTags();
+  const existingTag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+
+  if (existingTag) {
+    // Add existing tag to session
+    await tagStorage.addTagToSession(currentTagSessionId, existingTag.id);
+    showToast(`已添加标签: ${existingTag.name}`);
   } else {
-    // Create new tag
-    const color = '#1890ff'; // Default blue
-    const newTag = await tagStorage.createTag(choice.trim(), color);
+    // Create new tag with random color
+    const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const newTag = await tagStorage.createTag(tagName, color);
     if (newTag) {
-    await tagStorage.addTagToSession(sessionId, newTag.id);
-    showToast(`已创建并添加标签: ${newTag.name}`);
-  } else {
-    showToast('标签已存在或创建失败');
-  }
+      await tagStorage.addTagToSession(currentTagSessionId, newTag.id);
+      showToast(`已创建并添加标签: ${newTag.name}`);
+    } else {
+      showToast('标签创建失败');
+      return;
+    }
   }
 
+  // Clear input
+  tagNewInput.value = '';
+
+  // Refresh tag list and session list
+  await renderTagList();
   await loadSessions();
+}
+
+function hideTagDialog() {
+  tagDialog.style.display = 'none';
+  currentTagSessionId = null;
 }
 
 async function handleDelete(sessionId: string) {
@@ -615,6 +1027,17 @@ async function handleBatchCaptureStart() {
     return;
   }
 
+  // Check if already running
+  if (isBatchCapturing) {
+    const platformNames: Record<Platform, string> = {
+      doubao: '豆包',
+      yuanbao: '元宝',
+      claude: 'Claude',
+    };
+    showToast(`正在批量捕获 ${platformNames[currentPlatform] || currentPlatform} 的会话`);
+    return;
+  }
+
   // Get current tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) {
@@ -627,13 +1050,12 @@ async function handleBatchCaptureStart() {
     const response = await chrome.tabs.sendMessage(tab.id, { type: 'BATCH_CAPTURE_START' });
 
     if (response.success) {
-      // Show progress UI
+      isBatchCapturing = true;
+      // Show scanning UI initially
       batchCaptureSection.style.display = 'none';
-      batchProgress.style.display = 'block';
-      batchProgressCount.textContent = '0/?';
-      batchProgressFill.style.width = '0%';
-      batchProgressTitle.textContent = '准备中...';
-      batchCapturedCount.textContent = '0';
+      batchScanning.style.display = 'block';
+      batchProgress.style.display = 'none';
+      batchScanningCount.textContent = '0';
     } else {
       showToast(response.error || '启动失败');
     }
@@ -662,30 +1084,281 @@ function updateBatchCaptureProgress(progress: {
   captured: number;
   status: string;
   error?: string;
+  isScanning?: boolean;
+  discovered?: number;
+  eta?: number;
+  sessionJustCaptured?: boolean;
+  discoveredSessions?: Array<{ id: string; title: string; platform: string }>;
+  sessionMessagesTotal?: number;
 }) {
+  // Handle scanning state
+  if (progress.isScanning || progress.status === 'scanning') {
+    batchScanning.style.display = 'block';
+    batchProgress.style.display = 'none';
+    // 设置平台名称
+    if (batchScanningPlatform && currentPlatform) {
+      const platformNames: Record<Platform, string> = {
+        doubao: '豆包',
+        yuanbao: '元宝',
+        claude: 'Claude',
+      };
+      batchScanningPlatform.textContent = platformNames[currentPlatform] || currentPlatform;
+    }
+    if (progress.discovered !== undefined) {
+      batchScanningCount.textContent = String(progress.discovered);
+    }
+    return;
+  }
+
+  // Handle waiting for selection state
+  if (progress.status === 'waiting_selection' && progress.discoveredSessions) {
+    showSessionSelectDialog(progress.discoveredSessions);
+    return;
+  }
+
+  // Handle capture state
+  batchScanning.style.display = 'none';
+  batchProgress.style.display = 'block';
   batchProgressCount.textContent = `${progress.current}/${progress.total}`;
   batchProgressFill.style.width = progress.total > 0
     ? `${(progress.current / progress.total) * 100}%`
     : '0%';
-  batchProgressTitle.textContent = progress.currentTitle || '处理中...';
-  batchCapturedCount.textContent = String(progress.captured);
+
+  // 更新标题：显示会话级进度和消息级进度
+  const title = progress.currentTitle || '处理中';
+  const sessionMsgTotal = progress.sessionMessagesTotal;
+  if (sessionMsgTotal && sessionMsgTotal > 0) {
+    batchProgressTitle.textContent = `正在处理 ${title} (${sessionMsgTotal}条消息)`;
+  } else {
+    batchProgressTitle.textContent = `正在处理 ${title}`;
+  }
+
+  // Update ETA
+  const etaEl = document.getElementById('batch-progress-eta');
+  if (etaEl) {
+    if (progress.eta !== undefined && progress.eta > 0) {
+      etaEl.textContent = `· 预计 ${formatETA(progress.eta)}`;
+    } else {
+      etaEl.textContent = '';
+    }
+  }
 
   if (progress.status === 'completed') {
+    isBatchCapturing = false;
     hideBatchCaptureProgress();
     loadSessions();
     showToast(`批量捕获完成：${progress.current}个会话，${progress.captured}条消息`);
   } else if (progress.status === 'cancelled') {
+    isBatchCapturing = false;
     hideBatchCaptureProgress();
     showToast(`批量捕获已取消：已捕获${progress.captured}条消息`);
   } else if (progress.status === 'error') {
+    isBatchCapturing = false;
     hideBatchCaptureProgress();
     showToast(`批量捕获失败：${progress.error || '未知错误'}`);
   }
 }
 
 function hideBatchCaptureProgress() {
+  batchScanning.style.display = 'none';
   batchProgress.style.display = 'none';
   batchCaptureSection.style.display = currentPlatform ? 'block' : 'none';
+}
+
+// ========== Session Selection Dialog ==========
+
+function showSessionSelectDialog(sessions: Array<{ id: string; title: string; platform: string }>) {
+  discoveredSessions = sessions;
+  captureSelectedIds = new Set(sessions.map(s => s.id)); // 默认全选
+
+  // 渲染会话列表
+  renderSessionSelectList();
+
+  // 更新计数
+  updateSessionSelectCount();
+
+  // 显示对话框
+  sessionSelectDialog.style.display = 'flex';
+}
+
+function hideSessionSelectDialog() {
+  sessionSelectDialog.style.display = 'none';
+  discoveredSessions = [];
+  captureSelectedIds = new Set();
+}
+
+function renderSessionSelectList() {
+  sessionSelectList.innerHTML = discoveredSessions.map(session => `
+    <div class="session-select-item ${captureSelectedIds.has(session.id) ? 'selected' : ''}" data-id="${session.id}">
+      <input type="checkbox" ${captureSelectedIds.has(session.id) ? 'checked' : ''}>
+      <span class="session-title">${escapeHtml(session.title)}</span>
+    </div>
+  `).join('');
+
+  // 绑定点击事件
+  sessionSelectList.querySelectorAll('.session-select-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const id = item.getAttribute('data-id');
+      if (!id) return;
+
+      // 如果点击的不是checkbox，切换选中状态
+      if (target.tagName !== 'INPUT') {
+        const checkbox = item.querySelector('input') as HTMLInputElement;
+        checkbox.checked = !checkbox.checked;
+      }
+
+      const checkbox = item.querySelector('input') as HTMLInputElement;
+      if (checkbox.checked) {
+        captureSelectedIds.add(id);
+        item.classList.add('selected');
+      } else {
+        captureSelectedIds.delete(id);
+        item.classList.remove('selected');
+      }
+
+      updateSessionSelectCount();
+    });
+  });
+}
+
+function updateSessionSelectCount() {
+  sessionSelectCount.textContent = `已选择 ${captureSelectedIds.size} 个`;
+  sessionSelectAll.checked = captureSelectedIds.size === discoveredSessions.length;
+  sessionSelectAll.indeterminate = captureSelectedIds.size > 0 && captureSelectedIds.size < discoveredSessions.length;
+}
+
+function handleSessionSelectAll() {
+  // 注意：当用户点击checkbox时，浏览器会先切换checked状态，然后才触发change事件
+  // 所以这里 sessionSelectAll.checked 已经是点击后的新状态
+  if (sessionSelectAll.checked) {
+    discoveredSessions.forEach(s => captureSelectedIds.add(s.id));
+  } else {
+    captureSelectedIds.clear();
+  }
+  // 只更新列表显示，不更新checkbox状态（避免覆盖用户刚刚的操作）
+  renderSessionSelectList();
+  // 只更新计数文字和indeterminate状态，不改变checkbox的checked属性
+  sessionSelectCount.textContent = `已选择 ${captureSelectedIds.size} 个`;
+  // 当全部选中或全部取消时，取消indeterminate状态
+  sessionSelectAll.indeterminate = false;
+}
+
+async function handleSessionSelectCancel() {
+  // 取消批量捕获
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    await chrome.tabs.sendMessage(tab.id, { type: 'BATCH_CAPTURE_CANCEL' });
+  }
+  hideSessionSelectDialog();
+  hideBatchCaptureProgress();
+  showToast('已取消批量捕获');
+}
+
+async function handleSessionSelectConfirm() {
+  if (captureSelectedIds.size === 0) {
+    showToast('请至少选择一个会话');
+    return;
+  }
+
+  // 发送选中的会话ID到content script
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) {
+    showToast('无法获取当前标签页');
+    return;
+  }
+
+  await chrome.tabs.sendMessage(tab.id, {
+    type: 'BATCH_CAPTURE_SELECT_SESSIONS',
+    sessionIds: Array.from(captureSelectedIds)
+  });
+
+  // 隐藏选择对话框，显示进度
+  hideSessionSelectDialog();
+  batchScanning.style.display = 'none';
+  batchProgress.style.display = 'block';
+  batchProgressCount.textContent = `0/${captureSelectedIds.size}`;
+  batchProgressFill.style.width = '0%';
+  batchProgressTitle.textContent = '准备开始捕获...';
+}
+
+// ========== Session View Dialog ==========
+
+let currentViewSession: Session | null = null;
+
+async function handleViewSession(sessionId: string) {
+  const session = await sessionStorage.getSession(sessionId);
+  if (!session) return;
+
+  currentViewSession = session;
+
+  // Set title
+  sessionViewTitle.textContent = session.title;
+
+  // Set meta info
+  const date = new Date(session.updatedAt).toLocaleDateString('zh-CN');
+  sessionViewMeta.textContent = `${formatPlatformName(session.platform)} · ${date} · ${session.messageCount}条消息`;
+
+  // Render messages
+  renderSessionMessages(session);
+
+  // Show dialog
+  sessionViewDialog.style.display = 'flex';
+}
+
+function renderSessionMessages(session: Session) {
+  if (session.messages.length === 0) {
+    sessionViewMessages.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center; color: #999;">暂无消息</div>';
+    return;
+  }
+
+  sessionViewMessages.innerHTML = session.messages.map(msg => {
+    const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const roleLabel = msg.role === 'user' ? '👤 用户' : '🤖 助手';
+    const roleClass = msg.role;
+
+    // Highlight search keyword if present
+    let content = escapeHtml(msg.content);
+    if (searchKeyword) {
+      const regex = new RegExp(`(${escapeRegExp(searchKeyword)})`, 'gi');
+      content = content.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+
+    return `
+      <div class="session-message ${roleClass}">
+        <div class="session-message-header">
+          <span class="session-message-role">${roleLabel}</span>
+          <span class="session-message-time">${time}</span>
+        </div>
+        <div class="session-message-content">${content}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function hideSessionViewDialog() {
+  sessionViewDialog.style.display = 'none';
+  currentViewSession = null;
+}
+
+async function handleSessionViewCopy() {
+  if (!currentViewSession) return;
+
+  const formatted = formatSessionForInjection(currentViewSession, 'full');
+
+  try {
+    await navigator.clipboard.writeText(formatted);
+    showToast('已复制全部对话内容');
+  } catch (err) {
+    // Fallback for extension context
+    const textArea = document.createElement('textarea');
+    textArea.value = formatted;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showToast('已复制全部对话内容');
+  }
 }
 
 // ========== Utility ==========
@@ -702,6 +1375,20 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function formatETA(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}秒`;
+  } else if (seconds < 3600) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs > 0 ? `${mins}分${secs}秒` : `${mins}分钟`;
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return mins > 0 ? `${hours}小时${mins}分` : `${hours}小时`;
+  }
 }
 
 // Start
