@@ -877,6 +877,11 @@ body {
   padding: 0;
   max-height: 400px;
   overflow-y: auto;
+  /* 防止滚动穿透 - 滚动不会传播到父元素 */
+  overscroll-behavior: contain;
+  /* 优化滚动性能 */
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 }
 
 .session-view-messages {
@@ -890,6 +895,8 @@ body {
   font-size: 13px;
   line-height: 1.6;
   word-break: break-word;
+  /* 优化渲染性能 */
+  contain: layout style;
 }
 
 .session-message.user {
@@ -925,6 +932,11 @@ body {
 .session-message-time {
   color: #999;
   font-weight: 400;
+}
+
+/* 对话框打开时禁止背景滚动 */
+body.dialog-open .main {
+  overflow: hidden;
 }
 
 .session-message-content {

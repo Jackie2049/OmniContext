@@ -1307,8 +1307,9 @@ async function handleViewSession(sessionId: string) {
   // Render messages
   renderSessionMessages(session);
 
-  // Show dialog
+  // Show dialog and disable background scroll
   sessionViewDialog.style.display = 'flex';
+  document.body.classList.add('dialog-open');
 }
 
 function renderSessionMessages(session: Session) {
@@ -1343,6 +1344,7 @@ function renderSessionMessages(session: Session) {
 
 function hideSessionViewDialog() {
   sessionViewDialog.style.display = 'none';
+  document.body.classList.remove('dialog-open');
   currentViewSession = null;
 }
 
