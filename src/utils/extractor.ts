@@ -236,7 +236,6 @@ class PlatformMessageExtractor implements MessageExtractor {
       const elements = document.querySelectorAll(selector);
       if (elements.length > 0) {
         messageBlocks = elements;
-        console.log(`[OmniContext] Found ${elements.length} message blocks with: ${selector}`);
         break;
       }
     }
@@ -248,7 +247,6 @@ class PlatformMessageExtractor implements MessageExtractor {
 
     messageBlocks.forEach((block, index) => {
       const fullText = block.textContent || '';
-      console.log(`[OmniContext] Block ${index}: "${fullText.substring(0, 50)}..."`);
 
       // 多重检测用户消息的方式
       // 1. 检查 bg-s-color-bg-trans 类（豆包用户消息标志）
@@ -268,8 +266,6 @@ class PlatformMessageExtractor implements MessageExtractor {
                                    fullText.includes('以下是') ||
                                    fullText.length > 200; // 助手回复通常较长
 
-      console.log(`[OmniContext] Block ${index}: hasUserClass=${hasUserClass}, hasAssistantAvatar=${hasAssistantAvatar}, hasThinkingSection=${hasThinkingSection}, hasAssistantMarkers=${hasAssistantMarkers}`);
-
       // 综合判断：如果有助手特征，则不是用户消息
       const isUserMessage = hasUserClass && !hasAssistantAvatar && !hasThinkingSection && !hasAssistantMarkers;
 
@@ -280,7 +276,6 @@ class PlatformMessageExtractor implements MessageExtractor {
                                block.querySelector('[class*="content"]') ||
                                block;
         const content = this.extractTextContent(contentElement);
-        console.log(`[OmniContext] Block ${index} -> USER: "${content?.substring(0, 50)}..."`);
         if (content && content.length > 0) {
           messages.push({
             id: `doubao-msg-${index}`,
@@ -296,7 +291,6 @@ class PlatformMessageExtractor implements MessageExtractor {
                                block.querySelector('[class*="content"]') ||
                                block;
         const content = this.extractDoubaoAssistantContent(contentElement);
-        console.log(`[OmniContext] Block ${index} -> ASSISTANT: "${content?.substring(0, 50)}..."`);
         if (content && content.length > 0) {
           messages.push({
             id: `doubao-msg-${index}`,
@@ -307,8 +301,6 @@ class PlatformMessageExtractor implements MessageExtractor {
         }
       }
     });
-
-    console.log(`[OmniContext] Extracted ${messages.length} messages from Doubao, user: ${messages.filter(m => m.role === 'user').length}, assistant: ${messages.filter(m => m.role === 'assistant').length}`);
 
     return messages;
   }

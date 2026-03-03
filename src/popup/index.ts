@@ -14,23 +14,21 @@ interface ExportData {
 }
 
 // Platform icons - use img tags with chrome.runtime.getURL
-function getPlatformIcon(platform: Platform): string {
-  const iconUrls: Record<Platform, string> = {
-    doubao: chrome.runtime.getURL('icons/platforms/doubao.svg'),
-    yuanbao: chrome.runtime.getURL('icons/platforms/yuanbao.svg'),
-    claude: chrome.runtime.getURL('icons/platforms/claude.svg'),
-  };
-  return `<img class="platform-logo ${platform}" src="${iconUrls[platform]}" width="16" height="16" alt="${formatPlatformName(platform)}">`;
+interface IconOptions {
+  size?: number;
+  className?: string;
+  extraStyle?: string;
 }
 
-// Platform assistant icon for message view (larger size)
-function getAssistantIcon(platform: Platform): string {
+function getPlatformIcon(platform: Platform, options: IconOptions = {}): string {
+  const { size = 16, className = 'platform-logo', extraStyle = '' } = options;
   const iconUrls: Record<Platform, string> = {
     doubao: chrome.runtime.getURL('icons/platforms/doubao.svg'),
     yuanbao: chrome.runtime.getURL('icons/platforms/yuanbao.svg'),
     claude: chrome.runtime.getURL('icons/platforms/claude.svg'),
   };
-  return `<img class="assistant-icon ${platform}" src="${iconUrls[platform]}" width="18" height="18" alt="${formatPlatformName(platform)}" style="vertical-align: middle; margin-right: 4px;">`;
+  const style = extraStyle ? ` style="${extraStyle}"` : '';
+  return `<img class="${className} ${platform}" src="${iconUrls[platform]}" width="${size}" height="${size}" alt="${formatPlatformName(platform)}"${style}>`;
 }
 
 const PLATFORM_ICONS: Record<Platform, string> = {
@@ -1329,7 +1327,11 @@ function renderSessionMessages(session: Session) {
   }
 
   // 准备平台信息
-  const assistantIcon = getAssistantIcon(session.platform);
+  const assistantIcon = getPlatformIcon(session.platform, {
+    size: 18,
+    className: 'assistant-icon',
+    extraStyle: 'vertical-align: middle; margin-right: 4px;'
+  });
   const platformName = formatPlatformName(session.platform);
 
   sessionViewMessages.innerHTML = session.messages.map(msg => {

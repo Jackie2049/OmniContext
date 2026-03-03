@@ -79,31 +79,13 @@ export class BatchCapture {
       await this.scrollToLoadAllSessions();
 
       // 检查取消
-      if (this.isCancelled) {
-        this.reportProgress({
-          total: 0,
-          current: 0,
-          currentTitle: '',
-          captured: 0,
-          status: 'cancelled',
-        });
-        return;
-      }
+      if (this.checkCancelled()) return;
 
       // 2. 获取会话列表
       const sessionElements = await this.getSessionListElements();
 
       // 检查取消
-      if (this.isCancelled) {
-        this.reportProgress({
-          total: 0,
-          current: 0,
-          currentTitle: '',
-          captured: 0,
-          status: 'cancelled',
-        });
-        return;
-      }
+      if (this.checkCancelled()) return;
 
       if (sessionElements.length === 0) {
         this.reportProgress({
@@ -120,16 +102,7 @@ export class BatchCapture {
       // 3. 收集所有会话信息（不捕获，只获取标题和ID）
       for (const element of sessionElements) {
         // 检查取消
-        if (this.isCancelled) {
-          this.reportProgress({
-            total: 0,
-            current: 0,
-            currentTitle: '',
-            captured: 0,
-            status: 'cancelled',
-          });
-          return;
-        }
+        if (this.checkCancelled()) return;
 
         const title = this.getSessionTitle(element);
         const id = this.getSessionIdFromElement(element) || `${this.platform}-${Date.now()}-${Math.random()}`;
@@ -143,16 +116,7 @@ export class BatchCapture {
       console.log(`[OmniContext] Discovered ${this.discoveredSessions.length} sessions`);
 
       // 检查取消
-      if (this.isCancelled) {
-        this.reportProgress({
-          total: this.discoveredSessions.length,
-          current: 0,
-          currentTitle: '',
-          captured: 0,
-          status: 'cancelled',
-        });
-        return;
-      }
+      if (this.checkCancelled(this.discoveredSessions.length)) return;
 
       // 4. 通知 popup 等待用户选择
       this.waitingForSelection = true;
@@ -170,16 +134,7 @@ export class BatchCapture {
         await this.sleep(500);
       }
 
-      if (this.isCancelled) {
-        this.reportProgress({
-          total: this.discoveredSessions.length,
-          current: 0,
-          currentTitle: '',
-          captured: 0,
-          status: 'cancelled',
-        });
-        return;
-      }
+      if (this.checkCancelled(this.discoveredSessions.length)) return;
 
       // 5. 开始捕获选中的会话
       await this.captureSelectedSessions(sessionElements);
@@ -280,46 +235,19 @@ export class BatchCapture {
         await this.clickSession(element);
 
         // 检查取消
-        if (this.isCancelled) {
-          this.reportProgress({
-            total,
-            current: captured,
-            currentTitle: '',
-            captured: this.totalCaptured,
-            status: 'cancelled',
-          });
-          return;
-        }
+        if (this.checkCancelled(total, captured)) return;
 
         // 等待加载
         await this.waitForSessionLoad();
 
         // 检查取消
-        if (this.isCancelled) {
-          this.reportProgress({
-            total,
-            current: captured,
-            currentTitle: '',
-            captured: this.totalCaptured,
-            status: 'cancelled',
-          });
-          return;
-        }
+        if (this.checkCancelled(total, captured)) return;
 
         // 滚动加载历史，获取消息总数
         const sessionMessageTotal = await this.scrollToLoadHistory();
 
         // 检查取消
-        if (this.isCancelled) {
-          this.reportProgress({
-            total,
-            current: captured,
-            currentTitle: '',
-            captured: this.totalCaptured,
-            status: 'cancelled',
-          });
-          return;
-        }
+        if (this.checkCancelled(total, captured)) return;
 
         // 报告进度：正在捕获（显示消息数）
         this.reportProgress({
@@ -407,6 +335,23 @@ export class BatchCapture {
     this.removeFloatingProgress();
     // 清理存储的状态
     chrome.storage.local.remove(BATCH_CAPTURE_STATE_KEY).catch(() => {});
+  }
+
+  /**
+   * 检查是否已取消，如果是则报告进度并返回 true
+   */
+  private checkCancelled(total: number = 0, current: number = 0): boolean {
+    if (this.isCancelled) {
+      this.reportProgress({
+        total,
+        current,
+        currentTitle: '',
+        captured: this.totalCaptured,
+        status: 'cancelled',
+      });
+      return true;
+    }
+    return false;
   }
 
   /**
