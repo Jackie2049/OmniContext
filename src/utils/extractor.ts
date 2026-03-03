@@ -372,64 +372,77 @@ class PlatformMessageExtractor implements MessageExtractor {
   }
 
   private extractDoubaoAssistantContent(element: Element): string {
-    // For Doubao with thinking mode, we need to:
-    // 1. Find all text content
-    // 2. Filter out thinking sections (usually marked with special classes)
-    // 3. Keep only the final answer
+    // For Doubao with thinking mode, we want to:
+    // 1. Find thinking content (if present)
+    // 2. Find the final answer
+    // 3. Include BOTH thinking and answer in the captured content
 
-    const allText = element.textContent || '';
-
-    // Check if this contains thinking markers
-    // Common patterns: "思考中...", thinking sections with special styling
-    const thinkingPatterns = [
-      /思考中[\.。]+/,
-      / thinking[\.。]+/i,
+    // Look for thinking section elements
+    const thinkingSelectors = [
+      '[class*="thinking"]',
+      '[class*="thought"]',
+      '[class*="reasoning"]',
+      '[class*="think-mode"]',
+      '[class*="deep-think"]',
     ];
 
-    // If there's a clear separator between thinking and answer, use it
-    const separators = ['</think>', '正式回答：', '回答：', '最终答案：'];
+    let thinkingContent = '';
+    let answerContent = '';
 
-    for (const separator of separators) {
-      const parts = allText.split(separator);
-      if (parts.length > 1) {
-        // Return the part after the last separator
-        return parts[parts.length - 1].trim();
+    // Try to find thinking content
+    for (const selector of thinkingSelectors) {
+      const thinkingEl = element.querySelector(selector);
+      if (thinkingEl) {
+        thinkingContent = this.extractTextContent(thinkingEl).trim();
+        if (thinkingContent) break;
       }
     }
 
-    // Try to find content after thinking section by looking for structural indicators
-    const children = Array.from(element.children);
-    let foundThinking = false;
-    let finalContent = '';
+    // Extract all content first
+    const allContent = this.extractTextContent(element).trim();
 
-    for (const child of children) {
-      const text = child.textContent || '';
+    // If we found thinking content, separate it from the answer
+    if (thinkingContent && thinkingContent.length > 10) {
+      // Clean up thinking content - remove common prefixes
+      thinkingContent = thinkingContent
+        .replace(/^思考中[\.。。\s]*/i, '')
+        .replace(/^thinking[\.。。\s]*/i, '')
+        .replace(/^思考过程[：:\s]*/i, '')
+        .replace(/^已完成思考[：:\s]*/i, '')
+        .trim();
 
-      // Skip thinking indicators
-      if (thinkingPatterns.some(p => p.test(text))) {
-        foundThinking = true;
-        continue;
+      // Try to find answer content by removing thinking part from full content
+      // This handles cases where thinking is embedded in the same container
+      if (allContent.includes(thinkingContent)) {
+        // Find content after thinking section
+        const thinkingIndex = allContent.indexOf(thinkingContent);
+        if (thinkingIndex !== -1) {
+          const afterThinking = allContent.substring(thinkingIndex + thinkingContent.length).trim();
+          // Skip common separators
+          answerContent = afterThinking
+            .replace(/^[\n\r]+/, '')
+            .replace(/^(正式回答|回答|最终答案)[：:]\s*/i, '')
+            .trim();
+        }
       }
 
-      // Skip elements that look like thinking sections (often have special styling)
-      const className = child.className || '';
-      if (className.includes('thinking') || className.includes('thought')) {
-        foundThinking = true;
-        continue;
+      // If we couldn't separate, use the full content as answer
+      if (!answerContent) {
+        answerContent = allContent;
       }
 
-      // If we've passed the thinking section, collect content
-      if (foundThinking && text.length > 0) {
-        finalContent += text + '\n';
+      // Return combined format with thinking included
+      if (thinkingContent && answerContent && thinkingContent !== answerContent) {
+        return `【思考过程】
+${thinkingContent}
+
+【回答】
+${answerContent}`;
       }
     }
 
-    if (finalContent.length > 0) {
-      return finalContent.trim();
-    }
-
-    // Fallback: return all content if we can't distinguish
-    return this.extractTextContent(element);
+    // No thinking content found, return all content
+    return allContent;
   }
 
   private extractYuanbaoMessages(): Message[] {
