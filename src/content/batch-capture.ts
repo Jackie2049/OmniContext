@@ -1028,19 +1028,46 @@ export class BatchCapture {
   }
 
   private getDoubaoSessionListElements(): Element[] {
-    // 豆包的实际选择器
+    // 豆包的实际选择器 - 只匹配侧边栏中的会话项
+    // 优先使用更精确的选择器，避免匹配消息区域
     const selectors = [
-      '#flow_chat_sidebar [class*="chat-item"]',
-      '[data-testid="flow_chat_sidebar"] [class*="chat-item"]',
-      '[class*="chat-item"]',
+      // 最精确：在侧边栏容器内的会话项
+      '#flow_chat_sidebar [class*="chat-item"]:not([class*="message"])',
+      '[data-testid="flow_chat_sidebar"] [class*="chat-item"]:not([class*="message"])',
+      // 侧边栏内的链接项（会话通常是可点击的链接）
+      '#flow_chat_sidebar a[class*="chat-item"]',
+      '[data-testid="flow_chat_sidebar"] a[class*="chat-item"]',
+      // 侧边栏内的列表项
+      '#flow_chat_sidebar li[class*="chat-item"]',
+      '[data-testid="flow_chat_sidebar"] li[class*="chat-item"]',
     ];
 
     for (const selector of selectors) {
       const elements = document.querySelectorAll(selector);
       if (elements.length > 0) {
         console.log(`[OmniContext] Found ${elements.length} sessions with: ${selector}`);
-        return Array.from(elements);
+        // 进一步过滤：排除看起来像消息的元素（文本内容太长）
+        const filtered = Array.from(elements).filter(el => {
+          const textLength = el.textContent?.length || 0;
+          // 会话标题通常较短（<200字符）
+          return textLength < 200;
+        });
+        console.log(`[OmniContext] After filtering: ${filtered.length} sessions`);
+        return filtered;
       }
+    }
+
+    // 降级方案：使用侧边栏限定，但需要更严格的过滤
+    const sidebar = document.querySelector('#flow_chat_sidebar') ||
+                    document.querySelector('[data-testid="flow_chat_sidebar"]');
+    if (sidebar) {
+      const items = sidebar.querySelectorAll('[class*="chat-item"]');
+      const filtered = Array.from(items).filter(el => {
+        const textLength = el.textContent?.length || 0;
+        return textLength < 200;
+      });
+      console.log(`[OmniContext] Fallback: found ${items.length}, filtered to ${filtered.length}`);
+      return filtered;
     }
 
     console.warn('[OmniContext] No session list found');
