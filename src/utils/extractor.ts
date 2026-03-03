@@ -226,22 +226,38 @@ class PlatformMessageExtractor implements MessageExtractor {
     const messageBlocks = document.querySelectorAll('[class*="message-block-container"]');
 
     messageBlocks.forEach((block, index) => {
-      // Check if this block has user indicator (bg-s-color-bg-trans class)
-      const userElement = block.querySelector('[class*="bg-s-color-bg-trans"]');
+      // 多重检测用户消息的方式
+      // 1. 检查 bg-s-color-bg-trans 类（豆包用户消息标志）
+      const hasUserClass = !!block.querySelector('[class*="bg-s-color-bg-trans"]');
 
-      if (userElement) {
+      // 2. 检查是否有助手特有的元素（头像、thinking等）
+      const hasAssistantAvatar = !!block.querySelector('[class*="avatar"], [class*="bot-avatar"], [class*="ai-avatar"], img[src*="avatar"]');
+      const hasThinkingSection = !!block.querySelector('[class*="thinking"], [class*="thought"], [class*="reasoning"]');
+
+      // 3. 根据内容特征判断
+      const fullText = block.textContent || '';
+      const hasAssistantMarkers = fullText.includes('已完成思考') ||
+                                   fullText.includes('思考过程') ||
+                                   fullText.includes('让我来') ||
+                                   fullText.includes('我来帮你') ||
+                                   fullText.includes('我来分析');
+
+      // 综合判断：如果有助手特征，则不是用户消息
+      const isUserMessage = hasUserClass && !hasAssistantAvatar && !hasThinkingSection && !hasAssistantMarkers;
+
+      if (isUserMessage) {
         // User message - extract normally
-        const contentElement = block.querySelector('[class*="container-"]');
-        if (contentElement) {
-          const content = this.extractTextContent(contentElement);
-          if (content && content.length > 0) {
-            messages.push({
-              id: `doubao-msg-${index}`,
-              role: 'user',
-              content,
-              timestamp: Date.now(),
-            });
-          }
+        const contentElement = block.querySelector('[class*="container-"]') ||
+                               block.querySelector('[class*="message-content"]') ||
+                               block;
+        const content = this.extractTextContent(contentElement);
+        if (content && content.length > 0) {
+          messages.push({
+            id: `doubao-msg-${index}`,
+            role: 'user',
+            content,
+            timestamp: Date.now(),
+          });
         }
       } else {
         // Assistant message - need to distinguish thinking from final answer
@@ -262,7 +278,9 @@ class PlatformMessageExtractor implements MessageExtractor {
         }
 
         // Fallback: extract all text but filter out thinking section
-        const contentElement = block.querySelector('[class*="container-"]');
+        const contentElement = block.querySelector('[class*="container-"]') ||
+                               block.querySelector('[class*="message-content"]') ||
+                               block;
         if (contentElement) {
           const content = this.extractDoubaoAssistantContent(contentElement);
           if (content && content.length > 0) {
@@ -276,6 +294,8 @@ class PlatformMessageExtractor implements MessageExtractor {
         }
       }
     });
+
+    console.log(`[OmniContext] Extracted ${messages.length} messages from Doubao, user: ${messages.filter(m => m.role === 'user').length}, assistant: ${messages.filter(m => m.role === 'assistant').length}`);
 
     return messages;
   }

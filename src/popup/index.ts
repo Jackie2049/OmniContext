@@ -1292,12 +1292,17 @@ async function handleViewSession(sessionId: string) {
 
   currentViewSession = session;
 
-  // Set title
-  sessionViewTitle.textContent = session.title;
+  // Set title - remove platform suffix if present to avoid duplication
+  let displayTitle = session.title;
+  const platformName = formatPlatformName(session.platform);
+  // Remove " - 平台名" suffix if exists
+  const suffixPattern = new RegExp(`\\s*[-–—]\\s*${platformName}\\s*$`, 'i');
+  displayTitle = displayTitle.replace(suffixPattern, '');
+  sessionViewTitle.textContent = displayTitle;
 
   // Set meta info
   const date = new Date(session.updatedAt).toLocaleDateString('zh-CN');
-  sessionViewMeta.textContent = `${formatPlatformName(session.platform)} · ${date} · ${session.messageCount}条消息`;
+  sessionViewMeta.textContent = `${platformName} · ${date} · ${session.messageCount}条消息`;
 
   // Render messages
   renderSessionMessages(session);
