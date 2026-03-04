@@ -126,8 +126,29 @@ let captureSelectedIds = new Set<string>();
 // Tag dialog state
 let currentTagSessionId: string | null = null;
 
-// Track collapsed state of each platform (persisted in session)
+// Track collapsed state of each platform (persisted in chrome.storage.local)
 const collapsedPlatforms = new Set<string>();
+
+// Load collapsed state from storage
+async function loadCollapsedState(): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get('collapsedPlatforms');
+    if (result.collapsedPlatforms && Array.isArray(result.collapsedPlatforms)) {
+      result.collapsedPlatforms.forEach((p: string) => collapsedPlatforms.add(p));
+    }
+  } catch (e) {
+    console.error('Failed to load collapsed state:', e);
+  }
+}
+
+// Save collapsed state to storage
+async function saveCollapsedState(): Promise<void> {
+  try {
+    await chrome.storage.local.set({ collapsedPlatforms: Array.from(collapsedPlatforms) });
+  } catch (e) {
+    console.error('Failed to save collapsed state:', e);
+  }
+}
 
 // Debounce helper
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): T {
@@ -171,6 +192,9 @@ async function init() {
   } catch (e) {
     console.error('Failed to detect platform:', e);
   }
+
+  // Load collapsed state before loading sessions
+  await loadCollapsedState();
 
   // Load sessions
   await loadSessions();
@@ -587,6 +611,9 @@ function bindSessionEvents() {
       } else {
         collapsedPlatforms.delete(platform);
       }
+
+      // Persist collapsed state to storage
+      saveCollapsedState();
 
       const sessions = header.nextElementSibling as HTMLElement;
       if (sessions) {
@@ -1035,7 +1062,7 @@ async function handleBatchCaptureStart() {
     return;
   }
 
-  // Check if already running
+  // Check if already running locally
   if (isBatchCapturing) {
     const platformNames: Record<Platform, string> = {
       doubao: '豆包',
@@ -1046,11 +1073,60 @@ async function handleBatchCaptureStart() {
     return;
   }
 
+  // 检查全局批量捕获锁（防止在不同平台同时捕获）
+  try {
+    const lockCheck = await chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_CHECK_LOCK' });
+    if (lockCheck.isLocked) {
+      const platformNames: Record<string, string> = {
+        doubao: '豆包',
+        yuanbao: '元宝',
+        claude: 'Claude',
+      };
+      const lockedPlatform = platformNames[lockCheck.platform] || lockCheck.platform;
+      showToast(`请先完成 ${lockedPlatform} 的批量捕获`);
+      return;
+    }
+  } catch (err) {
+    console.error('Failed to check batch capture lock:', err);
+  }
+
   // Get current tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) {
     showToast('无法获取当前标签页');
     return;
+  }
+
+  // 尝试获取全局锁
+  try {
+    const lockResponse = await chrome.runtime.sendMessage({
+      type: 'BATCH_CAPTURE_ACQUIRE_LOCK',
+      platform: currentPlatform,
+      tabId: tab.id,
+    });
+    if (!lockResponse.success) {
+      showToast(lockResponse.reason || '另一个批量捕获正在进行中');
+      return;
+    }
+  } catch (err) {
+    console.error('Failed to acquire batch capture lock:', err);
+  }
+
+  // 元宝平台特殊提示
+  if (currentPlatform === 'yuanbao') {
+    // 先检查会话列表是否可见
+    try {
+      const checkResponse = await chrome.tabs.sendMessage(tab.id, { type: 'BATCH_CAPTURE_CHECK_SIDEBAR' });
+      if (!checkResponse.sidebarVisible) {
+        // 释放锁
+        await chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' });
+        // 显示友好提示（强调在元宝页面操作）
+        showToast('💡 请在元宝页面中点击左侧菜单栏打开元宝的会话列表，OmniContext才能捕获到会话哦~');
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to check sidebar:', err);
+    }
   }
 
   // Send message to content script
@@ -1065,9 +1141,18 @@ async function handleBatchCaptureStart() {
       batchProgress.style.display = 'none';
       batchScanningCount.textContent = '0';
     } else {
-      showToast(response.error || '启动失败');
+      // 获取失败，释放锁
+      await chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' });
+      // 针对元宝"未找到会话列表"显示特殊提示
+      if (currentPlatform === 'yuanbao' && response.error?.includes('未找到会话列表')) {
+        showToast('💡 请在元宝页面中点击左侧菜单栏打开元宝的会话列表，OmniContext才能捕获到会话哦~');
+      } else {
+        showToast(response.error || '启动失败');
+      }
     }
   } catch (err) {
+    // 出错，释放锁
+    await chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' });
     showToast('请刷新页面后重试');
   }
 }
@@ -1082,6 +1167,13 @@ async function handleBatchCaptureCancel() {
     showToast('批量捕获已取消');
   } catch (err) {
     hideBatchCaptureProgress();
+  }
+
+  // 释放全局锁
+  try {
+    await chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' });
+  } catch (err) {
+    console.error('Failed to release batch capture lock:', err);
   }
 }
 
@@ -1156,14 +1248,20 @@ function updateBatchCaptureProgress(progress: {
     hideBatchCaptureProgress();
     loadSessions();
     showToast(`批量捕获完成：${progress.current}个会话，${progress.captured}条消息`);
+    // 释放全局锁
+    chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' }).catch(() => {});
   } else if (progress.status === 'cancelled') {
     isBatchCapturing = false;
     hideBatchCaptureProgress();
     showToast(`批量捕获已取消：已捕获${progress.captured}条消息`);
+    // 释放全局锁
+    chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' }).catch(() => {});
   } else if (progress.status === 'error') {
     isBatchCapturing = false;
     hideBatchCaptureProgress();
     showToast(`批量捕获失败：${progress.error || '未知错误'}`);
+    // 释放全局锁
+    chrome.runtime.sendMessage({ type: 'BATCH_CAPTURE_RELEASE_LOCK' }).catch(() => {});
   }
 }
 

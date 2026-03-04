@@ -1187,22 +1187,52 @@ export class BatchCapture {
 
   private async ensureYuanbaoSidebarOpen(): Promise<void> {
     // 元宝的侧边栏选择器
-    const sidebar = document.querySelector('.yb-nav') ||
+    let sidebar = document.querySelector('.yb-nav') ||
                     document.querySelector('.yb-common-nav');
 
-    if (sidebar) {
-      const rect = sidebar.getBoundingClientRect();
-      const style = window.getComputedStyle(sidebar);
+    // 如果侧边栏不存在，尝试点击打开按钮
+    if (!sidebar) {
+      console.log('[OmniContext] Yuanbao sidebar not found, trying to open it');
 
-      // 检查侧边栏是否可见
-      if (rect.width > 0 && style.visibility !== 'hidden') {
-        console.log('[OmniContext] Yuanbao sidebar is already visible');
-        return;
+      const openButtonSelectors = [
+        '.yb-nav-fixed__trigger',
+        '.yb-common-nav__trigger',
+        '[class*="sidebar-trigger"]',
+        'button[class*="nav-trigger"]',
+        '[class*="menu-button"]',
+        'button[aria-label*="菜单"]',
+        'button[aria-label*="导航"]',
+      ];
+
+      for (const selector of openButtonSelectors) {
+        const button = document.querySelector(selector);
+        if (button) {
+          console.log(`[OmniContext] Found Yuanbao open button: ${selector}`);
+          (button as HTMLElement).click();
+          await this.sleep(1000);
+
+          // 重新查找侧边栏
+          sidebar = document.querySelector('.yb-nav') ||
+                    document.querySelector('.yb-common-nav');
+          if (sidebar) {
+            console.log('[OmniContext] Yuanbao sidebar opened');
+            break;
+          }
+        }
       }
+    }
 
+    if (!sidebar) {
+      console.warn('[OmniContext] Yuanbao sidebar element not found after trying to open');
+      return;
+    }
+
+    // 检查侧边栏是否可见
+    const rect = sidebar.getBoundingClientRect();
+    const style = window.getComputedStyle(sidebar);
+    if (rect.width === 0 || style.visibility === 'hidden') {
       console.log('[OmniContext] Yuanbao sidebar is hidden, trying to open it');
 
-      // 尝试找到打开侧边栏的按钮
       const openButtonSelectors = [
         '.yb-nav-fixed__trigger',
         '.yb-common-nav__trigger',
@@ -1221,15 +1251,90 @@ export class BatchCapture {
           const newRect = sidebar.getBoundingClientRect();
           if (newRect.width > 0) {
             console.log('[OmniContext] Yuanbao sidebar opened successfully');
+            break;
+          }
+        }
+      }
+    } else {
+      console.log('[OmniContext] Yuanbao sidebar is already visible');
+    }
+
+    // 关键：确保会话列表区域已展开（可能需要点击"历史会话"或"最近对话"）
+    await this.ensureYuanbaoSessionListExpanded();
+  }
+
+  /**
+   * 确保元宝的会话列表区域已展开
+   */
+  private async ensureYuanbaoSessionListExpanded(): Promise<void> {
+    // 检查会话列表是否已存在且有内容
+    const sessionList = document.querySelector('.yb-recent-conv-list');
+    const sessionItems = document.querySelectorAll('.yb-recent-conv-list__item');
+
+    if (sessionList && sessionItems.length > 0) {
+      console.log('[OmniContext] Yuanbao session list already has items');
+      return;
+    }
+
+    console.log('[OmniContext] Yuanbao session list is empty, trying to expand it');
+
+    // 尝试找到展开会话列表的按钮
+    // 元宝可能有"历史会话"、"最近对话"等展开按钮
+    const expandButtonSelectors = [
+      '[class*="recent-conv"]',
+      '[class*="history"]',
+      '[class*="session-list"]',
+      '[class*="conversation-list"]',
+      'button[aria-expanded="false"]',
+      '[class*="expand"]',
+      '[class*="collapse"]',
+      '.yb-nav__item',
+      '.yb-common-nav__item',
+    ];
+
+    for (const selector of expandButtonSelectors) {
+      const buttons = document.querySelectorAll(selector);
+      for (const button of buttons) {
+        const text = button.textContent?.toLowerCase() || '';
+        // 检查按钮文本是否包含相关关键词
+        if (text.includes('历史') || text.includes('最近') || text.includes('会话') ||
+            text.includes('对话') || text.includes('history') || text.includes('recent')) {
+          console.log(`[OmniContext] Found expand button: ${selector}, text: ${text}`);
+          (button as HTMLElement).click();
+          await this.sleep(800);
+
+          // 检查是否成功展开
+          const newItems = document.querySelectorAll('.yb-recent-conv-list__item');
+          if (newItems.length > 0) {
+            console.log(`[OmniContext] Session list expanded, found ${newItems.length} items`);
             return;
           }
         }
       }
-
-      console.warn('[OmniContext] Could not find button to open Yuanbao sidebar');
-    } else {
-      console.warn('[OmniContext] Yuanbao sidebar element not found');
     }
+
+    // 备选：尝试点击侧边栏中的任何可展开元素
+    const sidebar = document.querySelector('.yb-nav') || document.querySelector('.yb-common-nav');
+    if (sidebar) {
+      const clickableItems = sidebar.querySelectorAll('[role="button"], button, [class*="item"]');
+      for (const item of clickableItems) {
+        const className = item.className || '';
+        // 跳过已经是会话项的元素
+        if (className.includes('conv-list__item')) continue;
+
+        console.log(`[OmniContext] Trying to click sidebar item: ${className}`);
+        (item as HTMLElement).click();
+        await this.sleep(500);
+
+        const newItems = document.querySelectorAll('.yb-recent-conv-list__item');
+        if (newItems.length > 0) {
+          console.log(`[OmniContext] Session list appeared after click, found ${newItems.length} items`);
+          return;
+        }
+      }
+    }
+
+    console.warn('[OmniContext] Could not expand Yuanbao session list');
   }
 
   private getDoubaoSessionListElements(): Element[] {

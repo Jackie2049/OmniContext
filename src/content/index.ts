@@ -263,6 +263,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'BATCH_CAPTURE_CHECK_SIDEBAR') {
+    // 检查元宝会话列表侧边栏是否可见
+    if (currentPlatform === 'yuanbao') {
+      const sidebar = document.querySelector('.yb-nav') ||
+                      document.querySelector('.yb-common-nav');
+      const sessionList = document.querySelector('.yb-recent-conv-list');
+      const sessionItems = document.querySelectorAll('.yb-recent-conv-list__item');
+
+      const sidebarVisible = !!(sidebar &&
+        sidebar.getBoundingClientRect().width > 0 &&
+        sessionList &&
+        sessionItems.length > 0);
+
+      sendResponse({ sidebarVisible });
+    } else {
+      // 其他平台默认返回 true
+      sendResponse({ sidebarVisible: true });
+    }
+    return true;
+  }
+
   if (message.type === 'BATCH_CAPTURE_SELECT_SESSIONS') {
     setSelectedSessions(message.sessionIds || []);
     sendResponse({ success: true });
