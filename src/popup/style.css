@@ -206,6 +206,56 @@ body {
   border-color: #6366f1;
 }
 
+/* Platform Scroller (horizontal chip selector) */
+.platform-scroller {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  margin-top: 8px;
+}
+
+.platform-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.platform-chip {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: white;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.platform-chip:hover {
+  border-color: #c7d2fe;
+  background: #f8fafc;
+}
+
+.platform-chip.active {
+  background: #1D1D1F;
+  color: white;
+  border-color: #1D1D1F;
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* Search Highlight */
 .highlight {
   background: #fef08a;

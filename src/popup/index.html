@@ -54,23 +54,30 @@
         <input type="text" id="search-input" class="search-input" placeholder="搜索会话...">
         <button id="search-clear" class="search-clear" style="display: none;">×</button>
       </div>
-      <div class="filter-bar">
-        <div class="filter-wrapper">
-          <select id="filter-platform" class="filter-select">
-            <option value="">全部平台</option>
-            <option value="doubao">🫘 豆包</option>
-            <option value="yuanbao">💎 元宝</option>
-            <option value="claude">🤖 Claude</option>
-            <option value="deepseek">🔮 DeepSeek</option>
-            <option value="kimi">🌙 Kimi</option>
-            <option value="gemini">✨ Gemini</option>
-          </select>
+      <div class="platform-scroller" id="filter-platform">
+        <div class="platform-chip active" data-platform="">
+          <div class="chip-dot" style="background:#888"></div>全部
         </div>
-        <div class="filter-wrapper">
-          <select id="filter-tags" class="filter-select">
-            <option value="">全部标签</option>
-            <!-- Tags will be populated dynamically -->
-          </select>
+        <div class="platform-chip" data-platform="doubao">
+          <div class="chip-dot" style="background:#00D4AA"></div>豆包
+        </div>
+        <div class="platform-chip" data-platform="yuanbao">
+          <div class="chip-dot" style="background:#4A90E2"></div>元宝
+        </div>
+        <div class="platform-chip" data-platform="claude">
+          <div class="chip-dot" style="background:#D4A373"></div>Claude
+        </div>
+        <div class="platform-chip" data-platform="deepseek">
+          <div class="chip-dot" style="background:#6366F1"></div>DeepSeek
+        </div>
+        <div class="platform-chip" data-platform="kimi">
+          <div class="chip-dot" style="background:#FF6B35"></div>Kimi
+        </div>
+        <div class="platform-chip" data-platform="gemini">
+          <div class="chip-dot" style="background:#4285F4"></div>Gemini
+        </div>
+        <div class="platform-chip" data-platform="chatgpt">
+          <div class="chip-dot" style="background:#10A37F"></div>ChatGPT
         </div>
       </div>
     </div>
