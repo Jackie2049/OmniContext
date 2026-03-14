@@ -95,21 +95,36 @@ const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {
       assistant: '.chat-content-item-assistant, .segment-assistant',
     },
   },
+  gemini: {
+    hostname: 'gemini.google.com',
+    titleSelectors: [
+      '[class*="conversation-title"]',
+      '[class*="chat-title"]',
+      '[data-test-id="conversation-title"]',
+      // 注意：不使用 h1 和 title，因为它们会匹配 "Google Gemini" 页面标题
+    ],
+    messageSelectors: {
+      // Gemini uses Material Design components
+      container: 'main, [class*="conversation-container"], [class*="chat-container"], [data-test-id="conversation-panel"]',
+      user: '[class*="user-query"], [class*="user-message"], [data-test-id="user-query"]',
+      assistant: '[class*="response-container"], [class*="model-response"], [data-test-id="model-response"]',
+    },
+  },
   chatgpt: {
     hostname: 'chatgpt.com',
     titleSelectors: [
-      'title',
       '[class*="conversation-title"]',
       '[class*="chat-title"]',
       '[data-testid="conversation-title"]',
       'h1',
+      'title',
     ],
     messageSelectors: {
       // ChatGPT uses data-testid with conversation-turn pattern
-      // Even indexed turns are user messages, odd are assistant
+      // Even turns are user messages, odd turns are assistant messages
       container: '[data-testid^="conversation-turn-"], [class*="ThreadLayout__NodeWrapper"]',
-      user: '[data-message-author-role="user"]',
-      assistant: '[data-message-author-role="assistant"]',
+      user: '[data-testid^="conversation-turn-"]:nth-child(even) [class*="ConversationItem__ConversationItemWrapper-sc"]',
+      assistant: '[data-testid^="conversation-turn-"]:nth-child(odd) [class*="ConversationItem__ConversationItemWrapper-sc"]',
     },
   },
 };
@@ -122,6 +137,7 @@ export function detectPlatform(url: string): Platform | null {
   if (hostname.includes('claude.ai')) return 'claude';
   if (hostname.includes('deepseek.com')) return 'deepseek';
   if (hostname.includes('kimi.com')) return 'kimi';
+  if (hostname.includes('gemini.google.com')) return 'gemini';
   if (hostname.includes('chatgpt.com') || hostname.includes('chat.openai.com')) return 'chatgpt';
 
   return null;
@@ -189,8 +205,20 @@ export function extractSessionId(url: string, platform: Platform): string {
     }
   }
 
-  // ChatGPT: URL format is /c/{sessionId}
+  // Gemini: URL format is /app/{sessionId}
+  if (platform === 'gemini') {
+    const appIndex = pathParts.indexOf('app');
+    if (appIndex !== -1 && appIndex + 1 < pathParts.length) {
+      const sessionId = pathParts[appIndex + 1];
+      if (sessionId && sessionId.length >= 4) {
+        return sessionId;
+      }
+    }
+  }
+
+  // ChatGPT: URL format is /c/{sessionId} or /g/{gizmoId}/c/{sessionId} for GPTs
   if (platform === 'chatgpt') {
+    // Look for /c/ pattern in the path
     const cIndex = pathParts.indexOf('c');
     if (cIndex !== -1 && cIndex + 1 < pathParts.length) {
       const sessionId = pathParts[cIndex + 1];
@@ -198,10 +226,16 @@ export function extractSessionId(url: string, platform: Platform): string {
         return sessionId;
       }
     }
-    // Fallback: any UUID-like segment
-    for (const part of pathParts) {
-      if (part && part.length >= 8 && /^[a-zA-Z0-9_-]+$/.test(part)) {
-        return part;
+
+    // Check for /g/{gizmoId}/c/{sessionId} pattern
+    const gIndex = pathParts.indexOf('g');
+    if (gIndex !== -1) {
+      const cAfterG = pathParts.indexOf('c', gIndex);
+      if (cAfterG !== -1 && cAfterG + 1 < pathParts.length) {
+        const sessionId = pathParts[cAfterG + 1];
+        if (sessionId && sessionId.length >= 4) {
+          return sessionId;
+        }
       }
     }
   }
@@ -310,6 +344,7 @@ export function formatPlatformName(platform: Platform): string {
     claude: 'Claude',
     deepseek: 'DeepSeek',
     kimi: 'Kimi',
+    gemini: 'Gemini',
     chatgpt: 'ChatGPT',
   };
   return names[platform];
@@ -367,6 +402,10 @@ class PlatformMessageExtractor implements MessageExtractor {
 
     if (this.platform === 'kimi') {
       return this.extractKimiMessages();
+    }
+
+    if (this.platform === 'gemini') {
+      return this.extractGeminiMessages();
     }
 
     if (this.platform === 'chatgpt') {
@@ -1036,20 +1075,30 @@ class PlatformMessageExtractor implements MessageExtractor {
 
       console.log(`[OmniContext] [${index}] class="${className.slice(0, 50)}" text="${fullText.slice(0, 50)}..."`);
 
-      // 判断是否为用户消息
+      // 改进的检测逻辑：先检测助手消息（特征更明显），再检测用户消息
+      // 1. 助手消息特征
       const hasThinkingContent = !!msgEl.querySelector('[class*="ds-think-content"], [class*="think"], [class*="reasoning"]');
-      const hasUserClass = className.includes('d29f3d7d') ||
-                          className.includes('user') ||
-                          className.includes('human') ||
-                          className.includes('me') ||
-                          msgEl.hasAttribute('data-user');
+      const hasCodeBlock = !!msgEl.querySelector('pre, code, [class*="code"]');
+      const isLongResponse = fullText.length > 300;
+      const hasAssistantMarkers = fullText.includes('好的') ||
+                                   fullText.includes('以下') ||
+                                   fullText.includes('我来') ||
+                                   fullText.includes('首先') ||
+                                   fullText.includes('```');
 
-      // 简单的交替判断（如果没有明确的用户标识）
-      // 用户消息通常较短
-      const isShortMessage = fullText.length < 200;
-      const isLikelyUser = hasUserClass || (isShortMessage && index % 2 === 0);
+      // 2. 用户消息特征（更精确的匹配）
+      const hasSpecificUserClass = className.includes('d29f3d7d') ||
+                                    className.includes('ds-chat-message--user') ||
+                                    className.includes('ds-message--user');
+      const isShortPrompt = fullText.length < 100 && !hasCodeBlock;
 
-      const isUserMessage = isLikelyUser && !hasThinkingContent;
+      // 3. 综合判断
+      const isAssistantMessage = hasThinkingContent ||
+                                  (hasCodeBlock && !hasSpecificUserClass) ||
+                                  (isLongResponse && hasAssistantMarkers);
+
+      const isUserMessage = hasSpecificUserClass ||
+                            (isShortPrompt && !isAssistantMessage && !hasAssistantMarkers);
 
       if (isUserMessage) {
         const content = this.extractDeepseekUserContent(msgEl);
@@ -1380,6 +1429,172 @@ class PlatformMessageExtractor implements MessageExtractor {
     return messages;
   }
 
+  // ========== Gemini 平台消息提取 ==========
+
+  private extractGeminiMessages(): Message[] {
+    const messages: Message[] = [];
+
+    console.log('[OmniContext] Extracting Gemini messages...');
+
+    // Gemini uses Material Design, user messages and AI responses are clearly distinguished
+    // User: user-query-container or elements containing user-query
+    // AI: response-container or elements containing model-response
+
+    const userSelectors = [
+      '[class*="user-query-container"]',
+      '[class*="user-query"]',
+      '[data-test-id="user-query"]',
+      '.user-query-container',
+    ];
+
+    const assistantSelectors = [
+      '[class*="response-container"]',
+      '[class*="model-response"]',
+      '[data-test-id="model-response"]',
+      '.response-container',
+    ];
+
+    // Collect all message elements (deduplicate by element reference first)
+    const seenElements = new Set<Element>();
+    const allElements: Array<{ el: Element; isUser: boolean }> = [];
+
+    for (const selector of userSelectors) {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        if (!seenElements.has(el)) {
+          seenElements.add(el);
+          allElements.push({ el, isUser: true });
+        }
+      });
+    }
+
+    for (const selector of assistantSelectors) {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(el => {
+        if (!seenElements.has(el)) {
+          seenElements.add(el);
+          allElements.push({ el, isUser: false });
+        }
+      });
+    }
+
+    console.log(`[OmniContext] Gemini: Found ${allElements.filter(e => e.isUser).length} user elements, ${allElements.filter(e => !e.isUser).length} assistant elements`);
+
+    if (allElements.length === 0) {
+      return this.extractGeminiFromDocument();
+    }
+
+    // Sort by DOM position
+    allElements.sort((a, b) => {
+      const position = a.el.compareDocumentPosition(b.el);
+      return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+
+    allElements.forEach(({ el, isUser }, index) => {
+      const content = this.extractGeminiContent(el, isUser);
+      if (content && content.length >= 2) {
+        messages.push({
+          id: `gemini-msg-${index}`,
+          role: isUser ? 'user' : 'assistant',
+          content,
+          timestamp: Date.now(),
+        });
+        console.log(`[OmniContext] Gemini [${index}] ${isUser ? 'USER' : 'ASSISTANT'}: "${content.slice(0, 50)}..."`);
+      }
+    });
+
+    // Content-based deduplication: nested DOM elements may have the same content
+    const dedupedMessages: Message[] = [];
+    const seenContent = new Set<string>();
+    for (const msg of messages) {
+      const key = `${msg.role}:${msg.content}`;
+      if (!seenContent.has(key)) {
+        seenContent.add(key);
+        dedupedMessages.push(msg);
+      }
+    }
+    console.log(`[OmniContext] Gemini: After dedup: ${dedupedMessages.length} messages (removed ${messages.length - dedupedMessages.length} duplicates)`);
+
+    if (dedupedMessages.length === 0) {
+      return this.extractGeminiFromDocument();
+    }
+
+    return dedupedMessages;
+  }
+
+  private extractGeminiContent(element: Element, isUser: boolean): string {
+    if (isUser) {
+      // User message: usually in message-content or direct text
+      const contentEl = element.querySelector('[class*="message-content"], [class*="query-content"], .query-text');
+      if (contentEl?.textContent?.trim()) {
+        return contentEl.textContent.trim();
+      }
+    } else {
+      // AI response: may be in multiple areas, need to exclude tool calls etc.
+      const mainContent = element.querySelector('[class*="response-text"], [class*="model-response-text"], [class*="message-content"]');
+      if (mainContent?.textContent?.trim()) {
+        return mainContent.textContent.trim();
+      }
+    }
+
+    // Fallback: use element text directly
+    const text = element.textContent?.trim() || '';
+    return text;
+  }
+
+  private extractGeminiFromDocument(): Message[] {
+    const messages: Message[] = [];
+
+    console.log('[OmniContext] Gemini: Trying fallback extraction...');
+
+    // Find main conversation area
+    const mainContainer = document.querySelector('main, [class*="conversation"], [class*="chat-container"], [data-test-id="conversation-panel"]');
+    if (!mainContainer) {
+      console.warn('[OmniContext] Gemini: No message container found');
+      return messages;
+    }
+
+    // Try to infer messages from DOM structure
+    const messageBlocks = mainContainer.querySelectorAll('[class*="container"], [class*="message"], [class*="query"], [class*="response"]');
+    console.log(`[OmniContext] Gemini fallback: Found ${messageBlocks.length} potential message blocks`);
+
+    // Analyze each block's text length and structure
+    const candidates: Array<{ el: Element; isUser: boolean; text: string }> = [];
+
+    messageBlocks.forEach(block => {
+      const text = block.textContent?.trim() || '';
+      const className = block.className || '';
+
+      // Skip too short or too long blocks
+      if (text.length < 2 || text.length > 50000) return;
+
+      // Determine if user message
+      const isUser = className.toLowerCase().includes('user') ||
+                     className.toLowerCase().includes('query') ||
+                     className.toLowerCase().includes('human');
+
+      candidates.push({ el: block, isUser, text });
+    });
+
+    // Sort by position and extract, with simple deduplication
+    const seenText = new Set<string>();
+    candidates.forEach((candidate, index) => {
+      // Skip if same content as previous
+      if (seenText.has(candidate.text)) return;
+      seenText.add(candidate.text);
+
+      messages.push({
+        id: `gemini-fallback-${index}`,
+        role: candidate.isUser ? 'user' : 'assistant',
+        content: candidate.text.slice(0, 10000),
+        timestamp: Date.now(),
+      });
+    });
+
+    console.log(`[OmniContext] Gemini fallback: Extracted ${messages.length} messages`);
+    return messages;
+  }
+
   // ========== ChatGPT 平台消息提取 ==========
 
   private extractChatgptMessages(): Message[] {
@@ -1388,183 +1603,124 @@ class PlatformMessageExtractor implements MessageExtractor {
     console.log('[OmniContext] Extracting ChatGPT messages...');
 
     // ChatGPT uses data-testid="conversation-turn-{index}" for each turn
-    // Even indices (0, 2, 4...) are user messages
-    // Odd indices (1, 3, 5...) are assistant messages
-    // For newer ChatGPT interface, use data-message-author-role attribute
+    // Even turns (0, 2, 4...) are user messages, odd turns are assistant messages
+    const turnElements = document.querySelectorAll('[data-testid^="conversation-turn-"]');
 
-    // Try data-message-author-role approach first (more reliable)
-    const userElements = document.querySelectorAll('[data-message-author-role="user"]');
-    const assistantElements = document.querySelectorAll('[data-message-author-role="assistant"]');
+    console.log(`[OmniContext] ChatGPT: Found ${turnElements.length} conversation turns`);
 
-    if (userElements.length > 0 || assistantElements.length > 0) {
-      console.log(`[OmniContext] ChatGPT: Found ${userElements.length} user, ${assistantElements.length} assistant messages via data-message-author-role`);
-
-      // Merge and sort by DOM order
-      const allElements: Array<{ el: Element; isUser: boolean }> = [
-        ...Array.from(userElements).map(el => ({ el, isUser: true })),
-        ...Array.from(assistantElements).map(el => ({ el, isUser: false })),
-      ];
-
-      // Sort by document position
-      allElements.sort((a, b) => {
-        const position = a.el.compareDocumentPosition(b.el);
-        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-      });
-
-      allElements.forEach(({ el, isUser }, index) => {
-        const content = isUser ? this.extractChatgptUserContent(el) : this.extractChatgptAssistantContent(el);
-        if (content && content.length >= 1) {
-          messages.push({
-            id: `chatgpt-msg-${index}`,
-            role: isUser ? 'user' : 'assistant',
-            content,
-            timestamp: Date.now(),
-          });
-          console.log(`[OmniContext] ChatGPT [${index}] ${isUser ? 'USER' : 'ASSISTANT'}: "${content.slice(0, 50)}..."`);
-        }
-      });
-    }
-
-    // Fallback: try conversation-turn data-testid
-    if (messages.length === 0) {
-      return this.extractChatgptFromTurnElements();
-    }
-
-    console.log(`[OmniContext] ChatGPT: Extracted ${messages.length} messages`);
-    return messages;
-  }
-
-  private extractChatgptFromTurnElements(): Message[] {
-    const messages: Message[] = [];
-
-    // Find all conversation turns using data-testid
-    const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]');
-    console.log(`[OmniContext] ChatGPT fallback: Found ${turns.length} conversation turns`);
-
-    if (turns.length === 0) {
-      // Try legacy selectors
+    if (turnElements.length === 0) {
+      // Fallback: try legacy class-based selectors
       return this.extractChatgptFromLegacySelectors();
     }
 
-    turns.forEach((turn, index) => {
-      // Even turns are user, odd turns are assistant (based on data-testid index)
+    turnElements.forEach((turnEl, index) => {
+      // Determine role based on turn index (even = user, odd = assistant)
       const isUser = index % 2 === 0;
 
-      // Find the message content
-      const messageContent = turn.querySelector('.markdown, [class*="markdown"], [class*="message-content"], .text-message');
-      if (messageContent?.textContent?.trim()) {
-        const content = this.cleanChatgptContent(messageContent.textContent.trim());
-        if (content.length >= 1) {
-          messages.push({
-            id: `chatgpt-turn-${index}`,
-            role: isUser ? 'user' : 'assistant',
-            content,
-            timestamp: Date.now(),
-          });
-        }
+      // Extract content from the turn element
+      const content = this.extractChatgptContent(turnEl, isUser);
+
+      if (content && content.length >= 1) {
+        messages.push({
+          id: `chatgpt-msg-${index}`,
+          role: isUser ? 'user' : 'assistant',
+          content,
+          timestamp: Date.now(),
+        });
+        console.log(`[OmniContext] ChatGPT [${index}] ${isUser ? 'USER' : 'ASSISTANT'}: "${content.slice(0, 50)}..."`);
       }
     });
 
-    console.log(`[OmniContext] ChatGPT turn fallback: Extracted ${messages.length} messages`);
+    console.log(`[OmniContext] ChatGPT: Extracted ${messages.length} messages`);
+
+    // If no messages found, try fallback
+    if (messages.length === 0) {
+      return this.extractChatgptFromLegacySelectors();
+    }
+
     return messages;
   }
 
-  private extractChatgptUserContent(element: Element): string {
-    // User content is usually in a simpler structure
-    // Try to find the actual user message content
-    const contentSelectors = [
-      '[class*="markdown"]',
-      '[class*="message-content"]',
-      '.text-message',
-      'p',
-      'div',
-    ];
+  private extractChatgptContent(turnEl: Element, isUser: boolean): string {
+    // Try to find the message content within the turn
+    // User messages are typically in simpler containers
+    // Assistant messages may have more complex structure with reasoning, code blocks, etc.
+
+    const contentSelectors = isUser
+      ? [
+          // User message selectors
+          '[class*="user-message"]',
+          '[class*="ConversationItem"] > div:last-child',
+          'div > div > div',  // Nested structure
+          'p',
+        ]
+      : [
+          // Assistant message selectors
+          '[class*="markdown"]',
+          '[class*="prose"]',
+          '[class*="assistant-message"]',
+          '[class*="ConversationItem"] > div:last-child',
+          'div > div > div',
+        ];
 
     for (const selector of contentSelectors) {
-      const contentEl = element.querySelector(selector);
+      const contentEl = turnEl.querySelector(selector);
       if (contentEl?.textContent?.trim()) {
-        return this.cleanChatgptContent(contentEl.textContent.trim());
+        const text = contentEl.textContent.trim();
+        // Filter out button text and UI elements
+        if (text.length > 0 && !this.isChatgptUIElement(text)) {
+          return text;
+        }
       }
     }
 
-    // Fallback: use element's own text
-    return this.cleanChatgptContent(element.textContent?.trim() || '');
-  }
+    // Fallback: get all text from the turn, excluding buttons and UI elements
+    const clone = turnEl.cloneNode(true) as Element;
 
-  private extractChatgptAssistantContent(element: Element): string {
-    // Clone element to avoid modifying the original
-    const clone = element.cloneNode(true) as Element;
-
-    // Remove reasoning/thinking content (for o1/o3 models)
-    const reasoningSelectors = [
-      '[class*="reasoning"]',
-      '[class*="thinking"]',
-      '[data-testid*="reasoning"]',
-      '[class*="o1-reasoning"]',
-    ];
-
-    reasoningSelectors.forEach(selector => {
-      const reasoningEls = clone.querySelectorAll(selector);
-      reasoningEls.forEach(el => el.remove());
-    });
-
-    // Remove UI elements
+    // Remove common UI elements
     const uiSelectors = [
-      'button', // Copy, Regenerate, etc.
-      '[role="button"]',
+      'button',
+      '[class*="copy"]',
+      '[class*="regenerate"]',
       '[class*="feedback"]',
-      '[class*="action"]',
-      '[class*="toolbar"]',
-      '[class*="copy-button"]',
+      '[class*="thumb"]',
+      'svg',
     ];
 
     uiSelectors.forEach(selector => {
-      const uiEls = clone.querySelectorAll(selector);
-      uiEls.forEach(el => el.remove());
+      clone.querySelectorAll(selector).forEach(el => el.remove());
     });
 
-    // Extract text content
-    const contentSelectors = [
-      '[class*="markdown"]',
-      '[class*="message-content"]',
-      '.text-message',
-    ];
-
-    for (const selector of contentSelectors) {
-      const contentEl = clone.querySelector(selector);
-      if (contentEl?.textContent?.trim()) {
-        return this.cleanChatgptContent(contentEl.textContent.trim());
-      }
-    }
-
-    // Fallback: use clone's text content
-    return this.cleanChatgptContent(clone.textContent?.trim() || '');
+    const text = clone.textContent?.trim() || '';
+    return this.cleanChatgptContent(text);
   }
 
-  private cleanChatgptContent(content: string): string {
-    // Remove UI-related text
+  private isChatgptUIElement(text: string): boolean {
+    const uiPatterns = [
+      /^Copy$/,
+      /^Regenerate$/,
+      /^Good response$/,
+      /^Bad response$/,
+      /^Read aloud$/,
+      /^( thumbs_up| thumbs_down)$/,
+    ];
+    return uiPatterns.some(p => p.test(text.trim()));
+  }
+
+  private cleanChatgptContent(text: string): string {
+    // Remove common UI text that might be captured
     const uiTexts = [
       'Copy',
-      'Copied!',
       'Regenerate',
-      'Edit',
-      'Delete',
-      'Like',
-      'Dislike',
-      'Report',
+      'Good response',
+      'Bad response',
       'Read aloud',
-      'Share',
-      'Voice input',
-      'Stop generating',
-      'Continue generating',
     ];
 
-    let cleaned = content;
-    uiTexts.forEach(text => {
-      // Only remove if it's at the start or end of the content (likely UI)
-      const regex = new RegExp(`^(\\s*${text}\\s*|\\s*${text}\\s*)$`, 'gi');
-      cleaned = cleaned.replace(regex, '');
-    });
+    let cleaned = text;
+    for (const uiText of uiTexts) {
+      cleaned = cleaned.replace(new RegExp(`\\b${uiText}\\b`, 'g'), '');
+    }
 
     return cleaned.trim();
   }
@@ -1572,25 +1728,86 @@ class PlatformMessageExtractor implements MessageExtractor {
   private extractChatgptFromLegacySelectors(): Message[] {
     const messages: Message[] = [];
 
-    console.log('[OmniContext] ChatGPT: Trying legacy selectors...');
+    console.log('[OmniContext] ChatGPT: Trying legacy selector extraction...');
 
-    // Legacy ThreadLayout selectors
-    const nodeWrappers = document.querySelectorAll('[class*="ThreadLayout__NodeWrapper"]');
-    if (nodeWrappers.length > 0) {
-      nodeWrappers.forEach((node, index) => {
-        const isUser = node.querySelector('[class*="ConversationItem__User"]') !== null;
-        const contentEl = node.querySelector('[class*="ConversationItem__Body"]');
-        if (contentEl?.textContent?.trim()) {
-          messages.push({
-            id: `chatgpt-legacy-${index}`,
-            role: isUser ? 'user' : 'assistant',
-            content: this.cleanChatgptContent(contentEl.textContent.trim()),
-            timestamp: Date.now(),
-          });
-        }
-      });
+    // Legacy: ThreadLayout__NodeWrapper and ConversationItem__ConversationItemWrapper-sc
+    const container = document.querySelector('[class*="ThreadLayout__NodeWrapper"]');
+
+    if (!container) {
+      console.warn('[OmniContext] ChatGPT: No container found with legacy selectors');
+      return this.extractChatgptFromDocument();
     }
 
+    const messageItems = container.querySelectorAll('[class*="ConversationItem__ConversationItemWrapper-sc"]');
+    console.log(`[OmniContext] ChatGPT legacy: Found ${messageItems.length} message items`);
+
+    messageItems.forEach((item, index) => {
+      // Try to determine role by structure or position
+      // User messages typically have less complex structure
+      const hasComplexStructure = !!item.querySelector('pre, code, [class*="markdown"]');
+      const text = item.textContent?.trim() || '';
+
+      // Simple heuristic: short messages without code blocks are likely user messages
+      // This is not perfect but works as fallback
+      const isUser = !hasComplexStructure && text.length < 200;
+
+      const content = this.cleanChatgptContent(text);
+      if (content.length >= 1) {
+        messages.push({
+          id: `chatgpt-legacy-${index}`,
+          role: isUser ? 'user' : 'assistant',
+          content,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
+    if (messages.length === 0) {
+      return this.extractChatgptFromDocument();
+    }
+
+    return messages;
+  }
+
+  private extractChatgptFromDocument(): Message[] {
+    const messages: Message[] = [];
+
+    console.log('[OmniContext] ChatGPT: Trying fallback document extraction...');
+
+    // Find all article or div elements that might be messages
+    const candidates = document.querySelectorAll('article, [role="article"], main > div > div');
+
+    console.log(`[OmniContext] ChatGPT fallback: Found ${candidates.length} candidates`);
+
+    // Filter and sort by position
+    const messageCandidates: Array<{ el: Element; text: string }> = [];
+
+    candidates.forEach(el => {
+      const text = el.textContent?.trim() || '';
+      // Skip if too short or too long
+      if (text.length < 2 || text.length > 10000) return;
+      // Skip if looks like UI element
+      if (this.isChatgptUIElement(text)) return;
+
+      messageCandidates.push({ el, text });
+    });
+
+    // Alternate between user and assistant based on position
+    messageCandidates.forEach((candidate, index) => {
+      const isUser = index % 2 === 0;
+      const content = this.cleanChatgptContent(candidate.text);
+
+      if (content.length >= 1) {
+        messages.push({
+          id: `chatgpt-fallback-${index}`,
+          role: isUser ? 'user' : 'assistant',
+          content,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
+    console.log(`[OmniContext] ChatGPT fallback: Extracted ${messages.length} messages`);
     return messages;
   }
 
