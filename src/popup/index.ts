@@ -59,8 +59,7 @@ const manageBtn = document.getElementById('manage-btn')!;
 const toastEl = document.getElementById('toast')!;
 const searchInput = document.getElementById('search-input')! as HTMLInputElement;
 const searchClear = document.getElementById('search-clear')! as HTMLButtonElement;
-const filterPlatform = document.getElementById('filter-platform')! as HTMLSelectElement;
-const filterTags = document.getElementById('filter-tags')! as HTMLSelectElement;
+const filterPlatform = document.getElementById('filter-platform')!;
 
 // Import dialog elements
 const importDialog = document.getElementById('import-dialog')!;
@@ -324,8 +323,7 @@ async function init() {
   // Search events
   searchInput.addEventListener('input', debounce(handleSearch, 300));
   searchClear.addEventListener('click', clearSearch);
-  filterPlatform.addEventListener('change', handleFilterChange);
-  filterTags.addEventListener('change', handleTagFilterChange);
+  filterPlatform.addEventListener('click', handleFilterChange);
 }
 
 function handleSearch() {
@@ -341,15 +339,16 @@ function clearSearch() {
   renderSessions();
 }
 
-function handleFilterChange() {
-  selectedPlatform = filterPlatform.value as Platform | '';
-  renderSessions();
-}
+function handleFilterChange(e: Event) {
+  const chip = (e.target as HTMLElement).closest('.platform-chip');
+  if (!chip) return;
 
-function handleTagFilterChange() {
-  // Single select - get the selected value
-  const selectedValue = filterTags.value;
-  selectedTagIds = selectedValue ? [selectedValue] : [];
+  // Update selection state
+  filterPlatform.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  // Get selected platform
+  selectedPlatform = (chip as HTMLElement).dataset.platform as Platform | '' || '';
   renderSessions();
 }
 
@@ -379,12 +378,6 @@ async function loadSessions() {
 
   // Load all tags from local storage
   allTags = await tagStorage.getAllTags();
-
-  // Update tag filter dropdown
-  filterTags.innerHTML = '<option value="">全部标签</option>' +
-    allTags.map(tag =>
-    `<option value="${tag.id}">${tag.name}</option>`
-  ).join('');
 
   // Try to load from server if available, otherwise use local storage
   let sessions: Session[] = [];
@@ -473,7 +466,6 @@ async function renderSessions() {
       <div class="empty-state">
         <div class="empty-state-icon">📝</div>
         <p>还没有保存的会话</p>
-        <p style="font-size: 12px; margin-top: 8px;">在豆包、元宝或Claude聊天时<br>会自动保存</p>
       </div>
     `;
     return;
