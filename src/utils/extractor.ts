@@ -1597,6 +1597,19 @@ class PlatformMessageExtractor implements MessageExtractor {
 
   // ========== ChatGPT 平台消息提取 ==========
 
+  private filterOutSidebarElements(elements: Element[]): Element[] {
+    return elements.filter(el => {
+      // Check if element is inside sidebar/navigation
+      const isInSidebar = el.closest('nav') ||
+                          el.closest('[class*="sidebar"]') ||
+                          el.closest('[class*="history"]') ||
+                          el.closest('[class*="chat-list"]') ||
+                          el.closest('[data-testid="history-list"]') ||
+                          el.closest('[class*="SideBar"]');
+      return !isInSidebar;
+    });
+  }
+
   private extractChatgptMessages(): Message[] {
     const messages: Message[] = [];
 
@@ -1604,7 +1617,11 @@ class PlatformMessageExtractor implements MessageExtractor {
 
     // ChatGPT uses data-testid="conversation-turn-{index}" for each turn
     // Even turns (0, 2, 4...) are user messages, odd turns are assistant messages
-    const turnElements = document.querySelectorAll('[data-testid^="conversation-turn-"]');
+    // Only search within main content area to avoid selecting elements from sidebar
+    const mainContent = document.querySelector('main');
+    const turnElements = mainContent
+      ? this.filterOutSidebarElements(Array.from(mainContent.querySelectorAll('[data-testid^="conversation-turn-"]')))
+      : this.filterOutSidebarElements(Array.from(document.querySelectorAll('[data-testid^="conversation-turn-"]')));
 
     console.log(`[OmniContext] ChatGPT: Found ${turnElements.length} conversation turns`);
 
@@ -1815,7 +1832,11 @@ class PlatformMessageExtractor implements MessageExtractor {
     }
 
     // Strategy 2: Look for article elements or main content containers
-    const candidates = document.querySelectorAll('main article, [data-testid^="conversation-turn-"], .group, [class*="conversation-item"]');
+    // Only search within main content area to avoid sidebar elements
+    const mainContent = document.querySelector('main');
+    const candidates = mainContent
+      ? mainContent.querySelectorAll('article, [data-testid^="conversation-turn-"], .group, [class*="conversation-item"]')
+      : document.querySelectorAll('main article, [data-testid^="conversation-turn-"], .group, [class*="conversation-item"]');
 
     console.log(`[OmniContext] ChatGPT fallback: Found ${candidates.length} candidates`);
 
