@@ -48,18 +48,13 @@ const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {
   claude: {
     hostname: 'claude.ai',
     titleSelectors: [
-      '.conversation-title',
-      '[aria-selected="true"] .title',
-      '.chat-title',
-      '[class*="conversation-title"]',
-      '[class*="chat-title"]',
-      'h1',
+      '[data-testid="chat-title-button"]',  // Most reliable
       'title',
     ],
     messageSelectors: {
-      container: '.conversation-content, .messages-container, [class*="conversation"], [class*="messages"]',
-      user: '.human-message, .message.human, [data-testid="human-message"], [class*="human"], [class*="user-message"]',
-      assistant: '.assistant-message, .message.assistant, [data-testid="assistant-message"], [class*="assistant"], [class*="claude-message"]',
+      container: '[data-testid="sidebar-history"]',  // Only for placeholder, actual extraction uses dedicated methods
+      user: '[data-testid="user-message"]',
+      assistant: '[class*="font-claude-response"], [class*="font-claude-message"]',
     },
   },
   deepseek: {
@@ -172,6 +167,17 @@ export function extractSessionId(url: string, platform: Platform): string {
     // This fallback will be overridden by extractSessionIdFromDOM in content script
     // Use a timestamp-based ID to avoid collisions during initial load
     console.warn('[OmniContext] Yuanbao session ID not found in URL, will extract from DOM');
+  }
+
+  // Claude: URL format is /chat/{sessionId}
+  if (platform === 'claude') {
+    const chatIndex = pathParts.indexOf('chat');
+    if (chatIndex !== -1 && chatIndex + 1 < pathParts.length) {
+      const sessionId = pathParts[chatIndex + 1];
+      if (sessionId && sessionId.length >= 4) {
+        return sessionId;
+      }
+    }
   }
 
   // DeepSeek: URL format is /a/chat/s/{sessionId}
@@ -818,62 +824,102 @@ class PlatformMessageExtractor implements MessageExtractor {
   private extractClaudeMessages(): Message[] {
     const messages: Message[] = [];
 
-    // Claude.ai specific selectors
-    const containerSelectors = [
-      '[class*="conversation"]',
-      '[class*="messages"]',
-      '[data-testid="conversation"]',
-      '.prose',
-      'main',
+    // First, try to find all messages directly without turn containers
+    const userMessages = document.querySelectorAll('[data-testid="user-message"]');
+    const assistantMessages = document.querySelectorAll('[class*="font-claude-response"], [class*="font-claude-message"]');
+
+    // If we found messages, use them directly
+    if (userMessages.length > 0 || assistantMessages.length > 0) {
+      type MessageElement = { element: Element; role: 'user' | 'assistant'; index: number };
+      const userMsgs: MessageElement[] = Array.from(userMessages).map(el => ({
+        element: el,
+        role: 'user' as const,
+        index: 0
+      }));
+      const assistantMsgs: MessageElement[] = Array.from(assistantMessages).map(el => ({
+        element: el,
+        role: 'assistant' as const,
+        index: 0
+      }));
+      let allMessages = [...userMsgs, ...assistantMsgs];
+
+      // Sort by DOM position
+      allMessages.sort((a, b) => {
+        const aRect = a.element.getBoundingClientRect();
+        const bRect = b.element.getBoundingClientRect();
+        return aRect.top - bRect.top;
+      });
+
+      // Extract content
+      allMessages.forEach((msg, index) => {
+        let content = '';
+        if (msg.role === 'user') {
+          content = this.extractClaudeUserContent(msg.element);
+        } else {
+          content = this.extractClaudeAssistantContent(msg.element);
+        }
+
+        if (content) {
+          messages.push({
+            id: `claude-msg-${index}`,
+            role: msg.role,
+            content,
+            timestamp: Date.now()
+          });
+        }
+      });
+
+      return messages;
+    }
+
+    // Fallback: try turn containers
+    const turnSelectors = [
+      'div.flex.flex-col.gap-3.pt-6',  // Primary turn container
+      '[class*="flex"][class*="flex-col"][class*="gap-3"]',  // Fallback
     ];
 
-    let container: Element | null = null;
-    for (const selector of containerSelectors) {
-      container = document.querySelector(selector);
-      if (container) break;
+    let turns: NodeListOf<Element> | null = null;
+    for (const sel of turnSelectors) {
+      const found = document.querySelectorAll(sel);
+      if (found.length >= 1) {
+        turns = found;
+        break;
+      }
     }
 
-    if (!container) {
+    if (!turns || turns.length === 0) {
       return this.extractClaudeFromDocument();
     }
 
-    // Find message blocks - Claude uses various patterns
-    const messageBlocks = container.querySelectorAll(
-      '[class*="message"], [data-testid*="message"], [class*="turn"]'
-    );
-
-    if (messageBlocks.length === 0) {
-      return this.extractClaudeFromDocument();
-    }
-
-    messageBlocks.forEach((block, index) => {
-      const className = block.className || '';
-      const dataTestId = block.getAttribute('data-testid') || '';
-
-      // Determine if user or assistant
-      const isUser = /human|user/i.test(className + dataTestId) ||
-                     block.querySelector('[class*="human"], [class*="user"]');
-
-      if (isUser) {
-        const content = this.extractClaudeUserContent(block);
+    turns.forEach((turn, index) => {
+      // User message detection
+      const userEl = turn.querySelector('[data-testid="user-message"]');
+      if (userEl) {
+        const content = this.extractClaudeUserContent(userEl);
         if (content) {
           messages.push({
             id: `claude-msg-${index}`,
             role: 'user',
             content,
-            timestamp: Date.now(),
+            timestamp: Date.now()
           });
         }
-      } else {
-        // Assistant message - handle Extended Thinking
-        const content = this.extractClaudeAssistantContent(block);
-        if (content) {
-          messages.push({
-            id: `claude-msg-${index}`,
-            role: 'assistant',
-            content,
-            timestamp: Date.now(),
-          });
+      }
+      // Assistant message detection
+      else {
+        const assistantEl = turn.querySelector(
+          '[class*="font-claude-response"], [class*="font-claude-message"], div[class*="claude"]'
+        );
+        if (assistantEl) {
+          const content = this.extractClaudeAssistantContent(assistantEl);
+          if (content) {
+            messages.push({
+              id: `claude-msg-${index}`,
+              role: 'assistant',
+              content,
+              timestamp: Date.now()
+            });
+          }
         }
       }
     });
@@ -893,7 +939,7 @@ class PlatformMessageExtractor implements MessageExtractor {
     });
 
     // Assistant messages
-    document.querySelectorAll('[class*="assistant"], [class*="claude-message"]').forEach(el => {
+    document.querySelectorAll('[class*="assistant"], [class*="claude-message"], [class*="font-claude-response"]').forEach(el => {
       allElements.push({ el, isUser: false });
     });
 
@@ -922,80 +968,28 @@ class PlatformMessageExtractor implements MessageExtractor {
   }
 
   private extractClaudeUserContent(element: Element): string {
-    // Claude user messages are usually straightforward
-    const contentSelectors = [
-      '[class*="content"]',
-      '[class*="text"]',
-      '.prose',
-      'p',
-    ];
-
-    for (const selector of contentSelectors) {
-      const contentEl = element.querySelector(selector);
-      if (contentEl?.textContent?.trim()) {
-        return contentEl.textContent.trim();
-      }
-    }
-
+    // Direct text content extraction (Claude user messages are plain text)
     return element.textContent?.trim() || '';
   }
 
   private extractClaudeAssistantContent(element: Element): string {
-    // Claude's Extended Thinking feature puts thinking in special sections
-    // We want to extract only the final response, not the thinking
-
-    // Try to find the main response content (after thinking)
-    const responseSelectors = [
-      '[class*="response"]',
-      '[class*="answer"]',
-      '[class*="content"]:not([class*="thinking"])',
-      '.prose',
-    ];
-
-    for (const selector of responseSelectors) {
-      const responseEl = element.querySelector(selector);
-      if (responseEl?.textContent?.trim()) {
-        const text = responseEl.textContent.trim();
-        if (!this.isClaudeThinkingContent(text)) {
-          return text;
-        }
-      }
-    }
-
-    // Check for thinking block that needs to be filtered
+    // Check for Extended Thinking block (if present)
     const thinkingBlock = element.querySelector(
       '[class*="thinking"], [class*="thought"], [data-thinking]'
     );
 
     if (thinkingBlock) {
-      // Remove thinking block and get remaining content
+      // Clone element and remove thinking block
       const clone = element.cloneNode(true) as Element;
-      const thinkingInClone = clone.querySelector(
-        '[class*="thinking"], [class*="thought"], [data-thinking]'
-      );
-      if (thinkingInClone) {
-        thinkingInClone.remove();
-      }
-      const remainingText = clone.textContent?.trim();
-      if (remainingText && remainingText.length > 10) {
-        return remainingText;
+      clone.querySelector('[class*="thinking"], [class*="thought"], [data-thinking]')?.remove();
+      const remaining = clone.textContent?.trim();
+      if (remaining && remaining.length > 5) {
+        return remaining;
       }
     }
 
-    // Fallback: clean the content
+    // Fallback to direct content extraction
     return this.cleanClaudeContent(element.textContent || '');
-  }
-
-  private isClaudeThinkingContent(text: string): boolean {
-    // Claude Extended Thinking markers
-    const thinkingPatterns = [
-      /^Thinking[:：]/i,
-      /^Extended thinking/i,
-      /^Let me think/i,
-      /^I need to think/i,
-    ];
-
-    return thinkingPatterns.some(p => p.test(text.trim().slice(0, 50)));
   }
 
   private cleanClaudeContent(text: string): string {

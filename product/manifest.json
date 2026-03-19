@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "OmniContext",
+  "name": "🧠 OmniContext",
   "version": "1.0.0",
   "description": "跨平台AI对话上下文管理工具 - 在不同AI助手间共享记忆",
   "commands": {
@@ -33,16 +33,23 @@
     "default_icon": {
       "16": "icons/icon.svg",
       "48": "icons/icon.svg",
-      "128": "icons/icon.svg"
+      "128": "icons/icon.svg",
+      "256": "icons/icon.svg"
     }
   },
   "side_panel": {
-    "default_path": "src/popup/index.html"
+    "default_path": "src/popup/index.html",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg",
+      "256": "icons/icon.svg"
+    }
   },
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-loader-VEabpJy9.js"
+        "assets/index.ts-loader-pYnUnUGk.js"
       ],
       "matches": [
         "https://www.doubao.com/*",
@@ -88,8 +95,8 @@
         "https://yuanbao.tencent.com/*"
       ],
       "resources": [
-        "assets/extractor-YHhlWPwb.js",
-        "assets/index.ts-CaHgcwAm.js"
+        "assets/extractor-C4aYI8HI.js",
+        "assets/index.ts-DJXQVGtP.js"
       ],
       "use_dynamic_url": false
     }
