@@ -38,7 +38,13 @@
     }
   },
   "side_panel": {
-    "default_path": "src/popup/index.html"
+    "default_path": "src/popup/index.html",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg",
+      "256": "icons/icon.svg"
+    }
   },
   "content_scripts": [
     {
