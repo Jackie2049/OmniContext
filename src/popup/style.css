@@ -1209,3 +1209,108 @@ body.dialog-open .main {
   padding: 0 2px;
   border-radius: 2px;
 }
+
+/* Onboarding Dialog */
+.dialog-onboarding {
+  max-width: 360px;
+}
+
+.onboarding-content {
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.onboarding-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.onboarding-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.onboarding-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.onboarding-steps {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.onboarding-step {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.onboarding-step:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  background: var(--accent-copper);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.step-content p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.onboarding-tip {
+  background: var(--canvas-bg);
+  padding: 10px 14px;
+  border-radius: var(--radius-inner);
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.dialog-onboarding .dialog-footer {
+  padding: 16px 20px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-onboarding .btn-primary {
+  min-width: 100px;
+}
+
+.onboarding-dont-show {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.onboarding-dont-show input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-copper);
+}
