@@ -132,6 +132,11 @@ const deleteSelectAllCheckbox = document.getElementById('delete-select-all-check
 const deleteCancelBtn = document.getElementById('delete-cancel-btn')! as HTMLButtonElement;
 const deleteConfirmBtn = document.getElementById('delete-confirm-btn')! as HTMLButtonElement;
 
+// Onboarding dialog elements
+const onboardingDialog = document.getElementById('onboarding-dialog')!;
+const onboardingStartBtn = document.getElementById('onboarding-start-btn')! as HTMLButtonElement;
+const dontShowAgainCheckbox = document.getElementById('dont-show-again')! as HTMLInputElement;
+
 // State
 let currentPlatform: Platform | null = null;
 let allTags: Tag[] = [];
@@ -477,6 +482,22 @@ async function init() {
       refreshCurrentPlatform();
     }
   });
+
+  // Onboarding events
+  onboardingStartBtn.addEventListener('click', async () => {
+    const dontShowAgain = dontShowAgainCheckbox.checked;
+    await closeOnboardingDialog(dontShowAgain);
+  });
+  onboardingDialog.addEventListener('click', (e) => {
+    if (e.target === onboardingDialog) {
+      closeOnboardingDialog(dontShowAgainCheckbox.checked);
+    }
+  });
+
+  // Check and show onboarding
+  if (await checkAndShowOnboarding()) {
+    showOnboardingDialog();
+  }
 }
 
 function handleSearch() {
@@ -1749,6 +1770,33 @@ function formatETA(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     return mins > 0 ? `${hours}小时${mins}分` : `${hours}小时`;
+  }
+}
+
+// ==================== Onboarding ====================
+
+async function checkAndShowOnboarding(): Promise<boolean> {
+  const result = await chrome.storage.local.get(['sessions', 'onboarding_completed']);
+  const sessions = result.sessions as Session[] | undefined;
+
+  // 如果用户已标记完成引导，不再显示
+  if (result.onboarding_completed) {
+    return false;
+  }
+
+  // 没有任何会话时显示引导
+  return !sessions || sessions.length === 0;
+}
+
+function showOnboardingDialog() {
+  onboardingDialog.style.display = 'flex';
+}
+
+async function closeOnboardingDialog(dontShowAgain: boolean) {
+  onboardingDialog.style.display = 'none';
+  // 如果用户勾选"不再提示"，标记引导完成
+  if (dontShowAgain) {
+    await chrome.storage.local.set({ onboarding_completed: true });
   }
 }
 
