@@ -73,7 +73,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/platforms/*.svg"],
+      "resources": ["icons/platforms/*.svg", "icons/unknown.svg"],
       "matches": ["<all_urls>"]
     }
   ]

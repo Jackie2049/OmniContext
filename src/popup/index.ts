@@ -381,6 +381,9 @@ async function refreshCurrentPlatform(): Promise<void> {
 }
 
 async function init() {
+  // Show assistant card immediately with "未检测到" state
+  updateCurrentAssistantCard(null, false);
+
   // Check server status
   await checkServerStatus();
 
