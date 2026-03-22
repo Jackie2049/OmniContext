@@ -1,22 +1,22 @@
 # OmniContext
 
-Seamlessly share chat context across different AI assistants (including Doubao and more) with conversation auto-captures and one-click context injection.
+Seamlessly share chat context across different AI assistants with conversation context auto-captures and one-click injection.
 
-在不同AI助手间无缝共享对话上下文，支持豆包、ChatGPT、Claude、Gemini、DeepSeek、元宝、Kimi 等主流AI平台，自动捕获聊天记录，一键注入上下文，让AI协作更连贯。
-
----
-
-## 功能特性
-
-- 🤖 **多平台支持** - 支持豆包、ChatGPT、Claude、Gemini、DeepSeek、元宝、Kimi等主流AI助手
-- 💾 **自动捕获** - 访问平台时自动记录对话历史
-- 📋 **一键注入** - 选择历史会话，格式化复制到剪贴板
-- 🔒 **本地存储** - 数据仅存储在浏览器本地，隐私优先
-- 📤 **数据导出** - 支持JSON格式备份
+在不同AI助手间无缝共享对话上下文，支持豆包、ChatGPT、Claude、Gemini、DeepSeek、元宝、Kimi等主流AI平台。自动捕获聊天记录，一键注入上下文，让跨平台AI协作更连贯。
 
 ---
 
-## 安装使用
+## Features 功能特性
+
+- 🤖 **多平台支持** - 支持「豆包/ChatGPT/Claude/Gemini/DeepSeek/元宝/Kimi」等主流AI助手
+- 💾 **会话捕获** - 通过「自动捕获」和「批量捕获」可以扫描并提取AI助手的对话历史
+- 📋 **记忆注入** - 选择捕获的会话，可以将会话记忆一键复制给AI助手，快速恢复上下文
+- 🔒 **本地存储** - 数据仅存储在浏览器缓存或导出到本地，隐私安全有保障
+- 📤 **数据导出** - 支持导出记忆数据，再也不怕丢失AI小助手们的对话记录和宝贵记忆啦~
+
+---
+
+## Installation 安装启用
 
 ### 途径1：直接下载安装（推荐）
 
@@ -25,7 +25,7 @@ Seamlessly share chat context across different AI assistants (including Doubao a
 3. 开启右上角的「开发者模式」开关，点击「加载已解压的扩展程序」
 4. 选择解压后的文件夹，即可实现安装
 
-即可开始使用！
+赶紧使用起来吧！
 
 ### 途径2：基于源码自行构建
 
