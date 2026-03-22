@@ -1,4 +1,4 @@
-# OmniContext
+# ContextDrop
 
 Seamlessly share chat context across different AI assistants (including Doubao and more) with conversation auto-captures and one-click context injection.
 
@@ -23,7 +23,7 @@ Seamlessly share chat context across different AI assistants (including Doubao a
 不需要安装 Node.js，直接下载使用：
 
 ```bash
-git clone https://github.com/2012zzhao/OmniContext.git
+git clone https://github.com/Jackie2049/ContextDrop.git
 ```
 
 然后在 Chrome 中加载扩展：
@@ -31,7 +31,7 @@ git clone https://github.com/2012zzhao/OmniContext.git
 1. 打开 Chrome，访问 `chrome://extensions/`
 2. 开启右上角的「开发者模式」
 3. 点击「加载已解压的扩展程序」
-4. 选择 `OmniContext/product` 文件夹
+4. 选择 `ContextDrop/product` 文件夹
 
 即可开始使用！
 
@@ -40,8 +40,8 @@ git clone https://github.com/2012zzhao/OmniContext.git
 如果你想修改代码或参与开发：
 
 ```bash
-git clone https://github.com/2012zzhao/OmniContext.git
-cd OmniContext
+git clone https://github.com/Jackie2049/ContextDrop.git
+cd ContextDrop
 npm install
 npm run build
 ```
@@ -71,7 +71,7 @@ npm run build
 
 ### 3. 注入上下文到其他 AI 助手
 
-1. 在新平台（或新会话）打开 OmniContext 弹窗
+1. 在新平台（或新会话）打开 ContextDrop 弹窗
 2. 找到之前保存的会话
 3. 点击会话右侧的 📋 「复制」按钮
 4. 格式化后的上下文会自动复制到剪贴板
@@ -153,7 +153,7 @@ A: 数据存储在浏览器本地（IndexedDB）。
 ## 项目结构
 
 ```
-OmniContext/
+ContextDrop/
 ├── src/                     # Chrome 扩展核心源代码
 │   ├── background/          # 后台服务 (Service Worker)
 │   ├── content/             # 内容脚本 (页面注入)
