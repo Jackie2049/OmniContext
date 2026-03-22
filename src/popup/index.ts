@@ -60,6 +60,9 @@ const PLATFORM_ICON_URLS: Record<Platform, string> = {
   claude: chrome.runtime.getURL('icons/platforms/claude.svg'),
 };
 
+// 平台排序顺序
+const PLATFORM_ORDER: Platform[] = ['doubao', 'chatgpt', 'gemini', 'deepseek', 'claude', 'yuanbao', 'kimi'];
+
 // DOM Elements
 const sessionListEl = document.getElementById('session-list')!;
 const exportBtn = document.getElementById('export-btn')!;
@@ -229,6 +232,7 @@ function updateServerStatusUI() {
 
 // Current assistant card state
 let isAutoCaptureEnabled = false;
+let isConnectedToContentScript = false;
 
 // Load auto capture state from storage
 async function loadAutoCaptureState(): Promise<void> {
@@ -252,6 +256,17 @@ async function saveAutoCaptureState(enabled: boolean): Promise<void> {
 
 // Update auto capture toggle UI
 function updateAutoCaptureToggleUI(): void {
+  // 如果连接断开，强制显示熄灭状态
+  if (!isConnectedToContentScript) {
+    autoCaptureBtn.classList.remove('active');
+    autoCaptureBtn.classList.add('disabled');
+    autoCaptureText.textContent = '自动捕获：关';
+    return;
+  }
+
+  // 连接正常时，显示正常状态
+  autoCaptureBtn.classList.remove('disabled');
+
   if (isAutoCaptureEnabled) {
     autoCaptureBtn.classList.add('active');
     autoCaptureText.textContent = '自动捕获：开';
@@ -263,6 +278,12 @@ function updateAutoCaptureToggleUI(): void {
 
 // Toggle auto capture state
 async function toggleAutoCapture(): Promise<void> {
+  // 如果连接断开，禁止切换
+  if (!isConnectedToContentScript) {
+    showToast('⚠️ 请先刷新AI平台页面并确保自动捕获可用');
+    return;
+  }
+
   isAutoCaptureEnabled = !isAutoCaptureEnabled;
   updateAutoCaptureToggleUI();
   await saveAutoCaptureState(isAutoCaptureEnabled);
@@ -288,6 +309,10 @@ async function toggleAutoCapture(): Promise<void> {
 
 // Update current assistant card display
 function updateCurrentAssistantCard(platform: Platform | null, isConnected: boolean = false): void {
+  // 更新连接状态
+  const wasConnected = isConnectedToContentScript;
+  isConnectedToContentScript = isConnected;
+
   // Always show the card
   currentAssistantCard.style.display = 'block';
 
@@ -300,6 +325,8 @@ function updateCurrentAssistantCard(platform: Platform | null, isConnected: bool
     assistantStatusDot.classList.remove('connected');
     assistantStatusText.classList.remove('connected');
     assistantStatusText.textContent = '请打开支持的AI平台';
+    // 更新自动捕获按钮状态
+    updateAutoCaptureToggleUI();
     return;
   }
 
@@ -320,6 +347,11 @@ function updateCurrentAssistantCard(platform: Platform | null, isConnected: bool
     assistantStatusDot.classList.remove('connected');
     assistantStatusText.classList.remove('connected');
     assistantStatusText.textContent = '已断开：请刷新AI平台，并打开自动捕获开关';
+  }
+
+  // 如果连接状态发生变化，更新自动捕获按钮
+  if (wasConnected !== isConnected) {
+    updateAutoCaptureToggleUI();
   }
 }
 
@@ -714,8 +746,19 @@ async function renderSessions() {
   }, {} as Record<string, Session[]>);
 
   // Render
+  const sortedPlatforms = Object.keys(grouped).sort((a, b) => {
+    const indexA = PLATFORM_ORDER.indexOf(a as Platform);
+    const indexB = PLATFORM_ORDER.indexOf(b as Platform);
+    // 未知平台排在最后
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
   const platformHtmls = await Promise.all(
-    Object.entries(grouped).map(async ([platform, platformSessions]) => {
+    sortedPlatforms.map(async (platform) => {
+      const platformSessions = grouped[platform];
       const sessionHtmls = await Promise.all(
         platformSessions.map(session => renderSessionItemWithTags(session))
       );
