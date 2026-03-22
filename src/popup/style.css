@@ -231,6 +231,17 @@ body {
   background: #a8682d;
 }
 
+.btn-assistant-secondary.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--canvas-bg);
+  color: var(--text-secondary);
+}
+
+.btn-assistant-secondary.disabled:hover {
+  background: var(--canvas-bg);
+}
+
 .btn-assistant-primary svg,
 .btn-assistant-secondary svg {
   flex-shrink: 0;

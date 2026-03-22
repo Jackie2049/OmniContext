@@ -817,15 +817,24 @@ class PlatformMessageExtractor implements MessageExtractor {
     const userMessages = document.querySelectorAll('[data-testid="user-message"]');
     const assistantMessages = document.querySelectorAll('[class*="font-claude-response"], [class*="font-claude-message"]');
 
+    // 过滤掉嵌套的助手消息元素（只保留最外层）
+    const filteredAssistantMessages = Array.from(assistantMessages).filter(el => {
+      // 检查是否有父元素也是助手消息容器
+      const parent = el.parentElement;
+      if (!parent) return true;
+      // 如果父元素也是 claude 消息容器，则跳过这个子元素
+      return !parent.matches('[class*="font-claude-response"], [class*="font-claude-message"]');
+    });
+
     // If we found messages, use them directly
-    if (userMessages.length > 0 || assistantMessages.length > 0) {
+    if (userMessages.length > 0 || filteredAssistantMessages.length > 0) {
       type MessageElement = { element: Element; role: 'user' | 'assistant'; index: number };
       const userMsgs: MessageElement[] = Array.from(userMessages).map(el => ({
         element: el,
         role: 'user' as const,
         index: 0
       }));
-      const assistantMsgs: MessageElement[] = Array.from(assistantMessages).map(el => ({
+      const assistantMsgs: MessageElement[] = filteredAssistantMessages.map(el => ({
         element: el,
         role: 'assistant' as const,
         index: 0
@@ -839,6 +848,9 @@ class PlatformMessageExtractor implements MessageExtractor {
         return aRect.top - bRect.top;
       });
 
+      // 内容去重
+      const seenContent = new Set<string>();
+
       // Extract content
       allMessages.forEach((msg, index) => {
         let content = '';
@@ -848,7 +860,9 @@ class PlatformMessageExtractor implements MessageExtractor {
           content = this.extractClaudeAssistantContent(msg.element);
         }
 
-        if (content) {
+        // 去重检查
+        if (content && !seenContent.has(content)) {
+          seenContent.add(content);
           messages.push({
             id: `claude-msg-${index}`,
             role: msg.role,
