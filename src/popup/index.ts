@@ -61,7 +61,7 @@ const PLATFORM_ICON_URLS: Record<Platform, string> = {
 };
 
 // 平台排序顺序
-const PLATFORM_ORDER: Platform[] = ['doubao', 'chatgpt', 'gemini', 'deepseek', 'claude', 'yuanbao', 'kimi'];
+const PLATFORM_ORDER: Platform[] = ['doubao', 'chatgpt', 'claude', 'gemini', 'deepseek', 'yuanbao', 'kimi'];
 
 // DOM Elements
 const sessionListEl = document.getElementById('session-list')!;
