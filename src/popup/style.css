@@ -163,6 +163,7 @@ body {
   border-radius: 50%;
   margin-right: 4px;
   vertical-align: middle;
+  transition: background-color 0.2s ease;
 }
 
 .status-dot.connected {
@@ -229,6 +230,17 @@ body {
 
 .btn-assistant-secondary.active:hover {
   background: #a8682d;
+}
+
+.btn-assistant-secondary.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--canvas-bg);
+  color: var(--text-secondary);
+}
+
+.btn-assistant-secondary.disabled:hover {
+  background: var(--canvas-bg);
 }
 
 .btn-assistant-primary svg,
