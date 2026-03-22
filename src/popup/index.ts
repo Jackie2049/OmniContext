@@ -280,7 +280,7 @@ function updateAutoCaptureToggleUI(): void {
 async function toggleAutoCapture(): Promise<void> {
   // 如果连接断开，禁止切换
   if (!isConnectedToContentScript) {
-    showToast('⚠️ 请先刷新AI平台页面并确保自动捕获可用');
+    showToast('💡 请先刷新AI平台网页，再打开「自动捕获」开关');
     return;
   }
 
