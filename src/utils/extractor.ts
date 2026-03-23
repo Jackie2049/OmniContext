@@ -1014,119 +1014,51 @@ class PlatformMessageExtractor implements MessageExtractor {
   private extractDeepseekMessages(): Message[] {
     const messages: Message[] = [];
 
-    console.log('[ContextDrop] Extracting DeepSeek messages...');
-
     // DeepSeek uses CSS Modules with hashed class names
-    // Try multiple selectors to find messages
+    // Key insight: user messages have class "d29f3d7d", assistant messages do NOT have this class
+    // Both have "ds-message" class
 
-    // 方法1: 查找 ds-message 类
-    let allMessages = document.querySelectorAll('[class*="ds-message"]');
-    console.log(`[ContextDrop] Method 1 (ds-message): Found ${allMessages.length} elements`);
+    // 方法1: 使用精确选择器分别查找用户和助手消息
+    const userMessages = document.querySelectorAll('[class*="ds-message"][class*="d29f3d7d"]');
+    const allDsMessages = document.querySelectorAll('[class*="ds-message"]');
 
-    // 方法2: 查找包含 chat 的类
-    if (allMessages.length === 0) {
-      allMessages = document.querySelectorAll('[class*="chat-message"], [class*="message-item"], [class*="Message"]');
-      console.log(`[ContextDrop] Method 2 (chat-message): Found ${allMessages.length} elements`);
-    }
+    // 助手消息 = 所有 ds-message 减去用户消息
+    const userElementsSet = new Set(Array.from(userMessages));
+    const assistantMessages = Array.from(allDsMessages).filter(el => !userElementsSet.has(el));
 
-    // 方法3: 查找 main 区域内的段落
-    if (allMessages.length === 0) {
-      const main = document.querySelector('main');
-      if (main) {
-        allMessages = main.querySelectorAll('[class*="_"]');
-        console.log(`[ContextDrop] Method 3 (main divs with _): Found ${allMessages.length} elements`);
-      }
-    }
-
-    // 方法4: 查找对话气泡
-    if (allMessages.length === 0) {
-      allMessages = document.querySelectorAll('[class*="bubble"], [class*="balloon"], [class*="msg"]');
-      console.log(`[ContextDrop] Method 4 (bubble/msg): Found ${allMessages.length} elements`);
-    }
-
-    if (allMessages.length === 0) {
-      // Fallback: try broader extraction
-      console.log('[ContextDrop] No message elements found, trying fallback...');
+    if (userMessages.length === 0 && assistantMessages.length === 0) {
       return this.extractDeepseekFromDocument();
     }
 
-    // 过滤出可能是消息的元素（排除太短或太长的）
-    const candidateMessages = Array.from(allMessages).filter(el => {
-      const text = el.textContent?.trim() || '';
-      const children = el.children.length;
-      // 消息元素通常：有一定文本内容，子元素不多
-      return text.length >= 2 && text.length <= 10000 && children <= 10;
+    // 合并并按 DOM 位置排序
+    const allElements: Array<{ el: Element; isUser: boolean }> = [
+      ...Array.from(userMessages).map(el => ({ el, isUser: true })),
+      ...assistantMessages.map(el => ({ el, isUser: false })),
+    ];
+
+    // 按 DOM 位置排序
+    allElements.sort((a, b) => {
+      const position = a.el.compareDocumentPosition(b.el);
+      return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
 
-    console.log(`[ContextDrop] Filtered to ${candidateMessages.length} candidate messages`);
+    allElements.forEach(({ el, isUser }, index) => {
+      const content = isUser
+        ? this.extractDeepseekUserContent(el)
+        : this.extractDeepseekAssistantContent(el);
 
-    // 如果候选消息太少，使用原始列表
-    const messagesToProcess = candidateMessages.length > 0 ? candidateMessages : Array.from(allMessages);
-
-    messagesToProcess.forEach((msgEl, index) => {
-      const className = msgEl.className || '';
-      const fullText = msgEl.textContent?.trim() || '';
-
-      // 跳过太短的内容
-      if (fullText.length < 2) return;
-
-      console.log(`[ContextDrop] [${index}] class="${className.slice(0, 50)}" text="${fullText.slice(0, 50)}..."`);
-
-      // 改进的检测逻辑：先检测助手消息（特征更明显），再检测用户消息
-      // 1. 助手消息特征
-      const hasThinkingContent = !!msgEl.querySelector('[class*="ds-think-content"], [class*="think"], [class*="reasoning"]');
-      const hasCodeBlock = !!msgEl.querySelector('pre, code, [class*="code"]');
-      const isLongResponse = fullText.length > 300;
-      const hasAssistantMarkers = fullText.includes('好的') ||
-                                   fullText.includes('以下') ||
-                                   fullText.includes('我来') ||
-                                   fullText.includes('首先') ||
-                                   fullText.includes('```');
-
-      // 2. 用户消息特征（更精确的匹配）
-      const hasSpecificUserClass = className.includes('d29f3d7d') ||
-                                    className.includes('ds-chat-message--user') ||
-                                    className.includes('ds-message--user');
-      const isShortPrompt = fullText.length < 100 && !hasCodeBlock;
-
-      // 3. 综合判断
-      const isAssistantMessage = hasThinkingContent ||
-                                  (hasCodeBlock && !hasSpecificUserClass) ||
-                                  (isLongResponse && hasAssistantMarkers);
-
-      const isUserMessage = hasSpecificUserClass ||
-                            (isShortPrompt && !isAssistantMessage && !hasAssistantMarkers);
-
-      if (isUserMessage) {
-        const content = this.extractDeepseekUserContent(msgEl);
-        if (content && content.length >= 2) {
-          messages.push({
-            id: `deepseek-msg-${index}`,
-            role: 'user',
-            content,
-            timestamp: Date.now(),
-          });
-          console.log(`[ContextDrop] [${index}] USER: "${content.slice(0, 50)}..."`);
-        }
-      } else {
-        const content = this.extractDeepseekAssistantContent(msgEl);
-        if (content) {
-          messages.push({
-            id: `deepseek-msg-${index}`,
-            role: 'assistant',
-            content,
-            timestamp: Date.now(),
-          });
-          console.log(`[ContextDrop] [${index}] ASSISTANT: "${content.slice(0, 50)}..."`);
-        }
+      if (content && content.length >= 2) {
+        messages.push({
+          id: `deepseek-msg-${index}`,
+          role: isUser ? 'user' : 'assistant',
+          content,
+          timestamp: Date.now(),
+        });
       }
     });
 
-    console.log(`[ContextDrop] Extracted ${messages.length} DeepSeek messages`);
-
     // 如果还是没找到消息，尝试终极备用方案
     if (messages.length === 0) {
-      console.log('[ContextDrop] No messages found, trying ultimate fallback...');
       return this.extractDeepseekUltimateFallback();
     }
 

@@ -313,7 +313,7 @@ function startCapturing() {
   });
 
   // Fallback polling (less frequent, just in case)
-  setInterval(tryCapture, 2000);
+  setInterval(tryCapture, 5000);
 }
 
 function tryCapture() {
