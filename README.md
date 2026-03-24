@@ -1,41 +1,38 @@
 # ContextDrop
 
-Seamlessly share chat context across different AI assistants (including Doubao and more) with conversation auto-captures and one-click context injection.
+Seamlessly share chat context across different AI assistants (including Doubao, ChatGPT, Claude, and more) with conversation auto-captures and one-click context injection.
 
-在不同AI助手间无缝共享对话上下文，支持豆包、元宝、Claude等平台，自动捕获聊天记录，一键注入上下文，让AI协作更连贯。
+在不同AI助手间无缝共享对话上下文，支持豆包、ChatGPT、Claude、Gemini、DeepSeek、元宝、Kimi等平台，自动捕获聊天记录，一键注入上下文，让AI协作更连贯。
 
 ---
 
 ## 功能特性
 
-- 🤖 **多平台支持** - 豆包、元宝、Claude 等主流AI助手
+- 🤖 **多平台支持** - 豆包、ChatGPT、Claude、Gemini、DeepSeek、元宝、Kimi
 - 💾 **自动捕获** - 访问平台时自动记录对话历史
+- 📦 **批量捕获** - 一键捕获平台上的所有历史会话
 - 📋 **一键注入** - 选择历史会话，格式化复制到剪贴板
+- 👁️ **会话查看** - 点击会话查看完整对话历史
 - 🔒 **本地存储** - 数据仅存储在浏览器本地，隐私优先
-- 📤 **数据导出** - 支持JSON格式备份
+- 💾 **数据备份** - 支持导出/导入 JSON 格式备份
 
 ---
 
-## 安装使用
+## 安装
 
-### 途径1：直接安装使用（推荐）
+### 从 GitHub Releases 下载（推荐）
 
-不需要安装 Node.js，直接下载使用：
-
-```bash
-git clone https://github.com/Jackie2049/ContextDrop.git
-```
-
-然后在 Chrome 中加载扩展：
-
-1. 打开 Chrome，访问 `chrome://extensions/`
-2. 开启右上角的「开发者模式」
-3. 点击「加载已解压的扩展程序」
-4. 选择 `ContextDrop/product` 文件夹
+1. 访问 [Releases 页面](https://github.com/Jackie2049/ContextDrop/releases)
+2. 下载最新版本的 ZIP 文件
+3. 解压到任意目录
+4. 打开 Chrome，访问 `chrome://extensions/`
+5. 开启右上角的「开发者模式」
+6. 点击「加载已解压的扩展程序」
+7. 选择解压后的文件夹
 
 即可开始使用！
 
-### 途径2：基于源码自行构建
+### 从源码构建（开发者）
 
 如果你想修改代码或参与开发：
 
@@ -50,11 +47,18 @@ npm run build
 
 ---
 
+## 界面预览
+
+<!-- TODO: 添加扩展弹窗截图 -->
+![ContextDrop 弹窗界面](./docs/screenshot-popup.png)
+
+---
+
 ## 使用指南
 
 ### 1. 自动捕获对话
 
-安装扩展后，在支持的 AI 平台（豆包、元宝、Claude）正常聊天即可。
+安装扩展后，在支持的 AI 平台正常聊天即可。
 
 - 扩展会自动检测页面并捕获对话内容
 - 数据仅存储在浏览器本地，不会上传到任何服务器
@@ -64,7 +68,9 @@ npm run build
 
 点击浏览器工具栏的 🧠 图标打开扩展弹窗：
 
-- **按平台分组**：会话按豆包、元宝、Claude 分组显示
+- **按平台分组**：会话按平台分组显示
+- **平台筛选**：点击顶部平台标签快速筛选
+- **搜索会话**：输入关键词搜索会话标题和内容
 - **会话标题**：显示从页面抓取的会话标题（可编辑）
 - **消息数量**：显示每个会话的消息条数
 - **最后更新时间**：显示会话最后更新时间
@@ -100,28 +106,39 @@ npm run build
 
 ### 4. 管理会话
 
-- **编辑标题**：点击 ✏️ 图标可以修改会话标题
-- **删除会话**：点击 🗑️ 图标删除不需要的会话（不可恢复）
-- **刷新列表**：点击 🔄 按钮刷新会话列表
+- **删除会话**：点击底部「🗑️ 管理」按钮进入管理模式，选择并删除会话
+- **刷新列表**：点击「🔄 刷新」按钮刷新会话列表
 
-### 5. 导出备份
+### 5. 设置菜单
 
-点击 📤 「导出」按钮，可以将所有会话数据导出为 JSON 文件，用于备份或迁移。
+点击底部「⚙️ 设置」按钮，弹出菜单包含：
 
-导出的文件格式：
-```json
-[
-  {
-    "id": "session-id",
-    "platform": "doubao",
-    "title": "会话标题",
-    "messages": [...],
-    "messageCount": 10,
-    "createdAt": 1234567890,
-    "updatedAt": 1234567890
-  }
-]
-```
+- **📤 记忆导出到文件**：将所有会话数据导出为 JSON 备份文件
+- **📥 从文件导入记忆**：从备份文件恢复数据
+
+**导入模式**：
+- 合并（保留现有）：新数据导入，冲突时保留本地数据
+- 合并（覆盖冲突）：新数据导入，冲突时使用导入数据
+- 完全覆盖：清空本地数据，完全使用导入数据
+
+### 6. 批量捕获
+
+在支持的平台上，一键捕获所有历史会话：
+
+1. 访问 AI 平台（如豆包）
+2. 打开 ContextDrop 弹窗
+3. 点击「批量捕获」按钮
+4. 选择要捕获的会话
+5. 等待捕获完成
+
+> 注意：批量捕获需要前台运行，请勿切换页面。
+
+### 7. 查看会话详情
+
+点击任意会话卡片，可查看完整对话历史：
+
+- 消息按用户/助手分组显示
+- 支持一键复制全部内容
 
 ---
 
@@ -131,7 +148,7 @@ npm run build
 
 A: 确保：
 1. 扩展已正确加载（图标显示在工具栏）
-2. 你在支持的平台上（豆包、元宝、Claude）
+2. 你在支持的平台上
 3. 页面已完全加载（等待几秒钟）
 4. 已经发送了至少一条消息
 
@@ -146,7 +163,21 @@ A: 某些 AI 助手可能不支持 Markdown 格式。如果粘贴后格式不对
 A: 数据存储在浏览器本地（IndexedDB）。
 - 卸载扩展会丢失数据
 - 清除浏览器数据会丢失数据
-- 建议定期点击「导出」备份重要对话
+- 建议定期使用「导出」功能备份重要对话
+
+---
+
+## 支持平台
+
+| 平台 | 状态 | 备注 |
+|------|------|------|
+| 豆包 (Doubao) | ✅ | 完整支持 |
+| ChatGPT | ✅ | 完整支持 |
+| Claude | ✅ | 完整支持 |
+| Gemini | ✅ | 完整支持 |
+| DeepSeek | ✅ | 完整支持 |
+| 元宝 (Yuanbao) | ✅ | 完整支持 |
+| Kimi | ✅ | 完整支持 |
 
 ---
 
@@ -163,18 +194,8 @@ ContextDrop/
 │   └── utils/               # 工具函数
 ├── tests/                   # 测试文件
 ├── project/                 # 项目管理文档
-├── native/                  # Native Messaging Host (Python)
-│   ├── native_host.py       # 本地消息主机
-│   ├── install.py           # 安装脚本
-│   └── README.md
-├── server/                  # Python FastAPI 服务器
-│   ├── main.py              # 服务入口
-│   ├── storage.py           # 存储模块
-│   └── models.py            # 数据模型
-├── sdk/python/              # Python SDK
 ├── icons/                   # 图标资源
-├── product/                 # 可分发扩展版本
-├── dist/                    # 构建输出 (.gitignore)
+├── dist/                    # 构建输出
 ├── manifest.json            # 扩展配置
 ├── package.json
 └── README.md
@@ -240,9 +261,6 @@ npm run build
 
 # 测试
 npm test
-
-# 生产构建
-npm run build
 ```
 
 ### 测试
@@ -254,19 +272,6 @@ npm run build
 ✓ extractor.test.ts  18 tests
 ✓ formatter.test.ts  8 tests
 ```
-
----
-
-## 支持平台
-
-| 平台 | 状态 | 备注 |
-|------|------|------|
-| 豆包 (Doubao) | ✅ | 完整支持CSS Modules解析 |
-| 元宝 (Yuanbao) | ✅ | 完整支持 |
-| Claude | ✅ | 完整支持 |
-| DeepSeek | ✅ | 完整支持 |
-| Kimi | ✅ | 完整支持 |
-| Gemini | ✅ | 新增支持 |
 
 ---
 
@@ -293,6 +298,17 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+}
+```
+
+### 导出数据格式
+```typescript
+interface ExportData {
+  version: string;           // 格式版本号 "1.0"
+  exportedAt: string;        // ISO 时间戳
+  sessions: Session[];       // 所有会话
+  tags: Tag[];               // 所有标签
+  sessionTags: Record<string, string[]>;  // 会话-标签关联
 }
 ```
 
