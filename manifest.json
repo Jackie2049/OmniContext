@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ContextDrop",
   "version": "1.0.0",
-  "description": "跨平台AI对话上下文管理工具 - 在不同AI助手间共享记忆",
+  "description": "用于捕获和注入AI对话记录的浏览器插件，帮助用户在不同AI助手之间流转上下文记忆",
   "commands": {
     "_execute_action": {
       "suggested_key": {

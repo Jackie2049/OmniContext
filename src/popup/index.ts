@@ -875,7 +875,7 @@ function renderSessionItemWithHighlight(session: Session, tags: Tag[]): string {
   // Hide action buttons in delete mode
   const actionsHtml = isDeleteMode ? '' : `
     <div class="session-actions">
-      <button class="btn-icon inject" title="注入到当前平台" data-action="inject">${getProductIcon({ size: 18 })}</button>
+      <button class="btn-icon inject" title="注入到当前平台" data-action="inject">${getProductIcon({ size: 22 })}</button>
     </div>
   `;
 

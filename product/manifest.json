@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ContextDrop",
   "version": "1.0.0",
-  "description": "跨平台AI对话上下文管理工具 - 在不同AI助手间共享记忆",
+  "description": "用于捕获和注入AI对话记录的浏览器插件，帮助用户在不同AI助手之间流转上下文记忆",
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -49,7 +49,7 @@
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-loader-cRzsEGJF.js"
+        "assets/index.ts-loader-DA5GwisD.js"
       ],
       "matches": [
         "https://www.doubao.com/*",
@@ -97,8 +97,8 @@
         "https://yuanbao.tencent.com/*"
       ],
       "resources": [
-        "assets/extractor-DeKQSyNM.js",
-        "assets/index.ts-CW5F7hxm.js"
+        "assets/injector-yNl2u5-s.js",
+        "assets/index.ts-NcHWQDJ9.js"
       ],
       "use_dynamic_url": false
     }
