@@ -7,13 +7,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/ChatGPT-Supported-10a37f?logo=openai" alt="ChatGPT Supported">
-  <img src="https://img.shields.io/badge/Claude-Supported-d97757?logo=claude" alt="Claude Supported">
-  <img src="https://img.shields.io/badge/Gemini-Supported-4285f4?logo=google" alt="Gemini Supported">
-  <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
   <img src="https://img.shields.io/badge/豆包(Doubao)-Supported-ff6a00" alt="Doubao Supported">
-  <img src="https://img.shields.io/badge/Kimi-Supported-00b0ff" alt="Kimi Supported">
   <img src="https://img.shields.io/badge/元宝(Yuanbao)-Supported-00c853" alt="Yuanbao Supported">
+  <img src="https://img.shields.io/badge/Claude-Supported-d97757?logo=anthropic" alt="Claude Supported">
+  <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
+  <img src="https://img.shields.io/badge/Kimi-Supported-00b0ff" alt="Kimi Supported">
+  <img src="https://img.shields.io/badge/Gemini-Supported-4285f4?logo=google" alt="Gemini Supported">
+  <img src="https://img.shields.io/badge/ChatGPT-Supported-10a37f?logo=openai" alt="ChatGPT Supported">
 </p>
 
 <p align="center"><b>用于捕获和注入AI对话记录的浏览器插件</b><br><b>帮助用户在不同AI助手之间流转上下文记忆</b></p>
