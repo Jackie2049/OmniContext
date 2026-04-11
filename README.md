@@ -1,4 +1,4 @@
-# ContextDrop
+<h1 align="center"><img src="icons/icon-32.png" width="32" height="32" alt="ContextDrop"> ContextDrop</h1>
 
 <p align="center">
   <a href="https://github.com/Jackie2049/ContextDrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
