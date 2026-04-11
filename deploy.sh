@@ -1,15 +1,39 @@
 #!/bin/bash
 # ContextDrop 一键构建部署脚本
 # 用法: ./deploy.sh
+# 支持: WSL 和 macOS
 
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DESKTOP_DIR="/mnt/c/Users/73523/Desktop"
 EXTENSION_NAME="ContextDrop"
+
+# 检测操作系统并设置桌面路径
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    DESKTOP_DIR="$HOME/Desktop"
+elif [[ -d "/mnt/c/Users" ]]; then
+    # WSL - 尝试找到用户目录
+    # 优先使用当前 Windows 用户名
+    if command -v powershell.exe &> /dev/null; then
+        WIN_USERNAME=$(powershell.exe -NoProfile -Command '$env:USERNAME' 2>/dev/null | tr -d '\r')
+        if [[ -n "$WIN_USERNAME" && -d "/mnt/c/Users/$WIN_USERNAME" ]]; then
+            DESKTOP_DIR="/mnt/c/Users/$WIN_USERNAME/Desktop"
+        fi
+    fi
+    # 如果上面没设置成功，使用默认路径
+    if [[ -z "$DESKTOP_DIR" ]]; then
+        DESKTOP_DIR="/mnt/c/Users/$(whoami)/Desktop"
+    fi
+else
+    # Linux 或其他系统
+    DESKTOP_DIR="$HOME/Desktop"
+fi
 
 echo "========================================"
 echo "  ContextDrop 构建部署脚本"
+echo "  平台: $(uname -s)"
+echo "  桌面: $DESKTOP_DIR"
 echo "========================================"
 
 # 切换到项目目录

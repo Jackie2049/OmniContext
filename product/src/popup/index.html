@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContextDrop</title>
-  <script type="module" crossorigin src="../../assets/popup-B4V1XMEr.js"></script>
-  <link rel="modulepreload" crossorigin href="../../assets/extractor-DeKQSyNM.js">
-  <link rel="stylesheet" crossorigin href="../../assets/popup-DEz9unrq.css">
+  <script type="module" crossorigin src="../../assets/popup-CqrQYGfC.js"></script>
+  <link rel="modulepreload" crossorigin href="../../assets/injector-yNl2u5-s.js">
+  <link rel="stylesheet" crossorigin href="../../assets/popup-BffUn6ps.css">
 </head>
 <body>
   <div id="app">
@@ -245,6 +245,49 @@
       <div class="dialog-footer">
         <button id="session-view-copy" class="btn btn-secondary">📋 复制全部</button>
         <button id="session-view-close" class="btn btn-primary">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inject Preview Dialog -->
+  <div id="inject-preview-dialog" class="dialog-overlay" style="display: none;">
+    <div class="dialog dialog-inject">
+      <div class="dialog-header">
+        <span>注入预览</span>
+        <span id="inject-target-platform" class="inject-target-platform">→ 豆包</span>
+      </div>
+      <div class="dialog-body">
+        <div class="inject-stats">
+          <div class="inject-stat">
+            <span class="stat-label">消息数</span>
+            <span id="inject-message-count" class="stat-value">15 条</span>
+          </div>
+          <div class="inject-stat">
+            <span class="stat-label">字符数</span>
+            <span id="inject-char-count" class="stat-value">3,456</span>
+          </div>
+          <div class="inject-stat">
+            <span class="stat-label">Token数量估计</span>
+            <span id="inject-token-count" class="stat-value">1,234</span>
+          </div>
+        </div>
+        <div id="inject-truncate-section" class="inject-truncate-section" style="display: none;">
+          <div class="truncate-label">
+            <span>⚠️ 内容较长，建议截断</span>
+            <span id="inject-limit-info" class="limit-info">限制: 32K</span>
+          </div>
+          <div class="truncate-slider-wrapper">
+            <label>保留最近：</label>
+            <input type="range" id="inject-message-slider" class="truncate-slider" min="1" max="50" value="20">
+            <span id="inject-slider-value" class="slider-value">20</span> 条
+          </div>
+        </div>
+        <textarea class="inject-preview-content" id="inject-preview-content" placeholder="预览内容..."></textarea>
+      </div>
+      <div class="dialog-footer">
+        <button id="inject-cancel" class="btn btn-secondary">取消</button>
+        <button id="inject-copy-fallback" class="btn btn-secondary">📋 拷贝记忆</button>
+        <button id="inject-confirm" class="btn btn-primary">⚡️ 一键注入</button>
       </div>
     </div>
   </div>

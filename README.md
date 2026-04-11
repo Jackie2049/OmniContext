@@ -1,5 +1,7 @@
 # ContextDrop
 
+> 用于捕获和注入AI对话记录的浏览器插件，帮助用户在不同AI助手之间流转上下文记忆
+
 Seamlessly share chat context across different AI assistants (including Doubao and more) with conversation auto-captures and one-click context injection.
 
 在不同AI助手间无缝共享对话上下文，支持豆包、元宝、Claude等平台，自动捕获聊天记录，一键注入上下文，让AI协作更连贯。
