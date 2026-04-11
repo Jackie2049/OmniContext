@@ -2,9 +2,9 @@
 
 > 用于捕获和注入AI对话记录的浏览器插件，帮助用户在不同AI助手之间流转上下文记忆
 
-Seamlessly share chat context across different AI assistants (including Doubao and more) with conversation auto-captures and one-click context injection.
+ContextDrop is a browser extension focused on AI memory management. It automatically captures conversation records between users and AI assistants, and supports injecting these historical memories into other AI assistants with one click, helping users seamlessly transfer context across various AI assistants — just like AirDrop. Data is stored locally with privacy and security assured. Now supports major AI assistants including Doubao, DeepSeek, ChatGPT, Gemini, Yuanbao, Kimi, and Claude. Install to your browser now and start experiencing silky-smooth AI memory transfer like AirDrop!
 
-在不同AI助手间无缝共享对话上下文，支持豆包、元宝、Claude等平台，自动捕获聊天记录，一键注入上下文，让AI协作更连贯。
+ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以自动捕获用户和AI助手之间的对话记录，并支持将这些历史记忆一键注入给其他AI助手，以此帮助用户在各种AI助手之间无缝流转上下文——就像AirDrop那样。数据本地存储，隐私安全无忧，现已支持豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手。即刻安装到浏览器开始体验，从此像AirDrop一样丝滑流转AI记忆！
 
 ---
 
