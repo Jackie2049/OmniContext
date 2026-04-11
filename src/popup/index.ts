@@ -51,7 +51,7 @@ function getPlatformIcon(platform: Platform | undefined, options: IconOptions = 
 // 获取产品logo（粉色大脑）
 function getProductIcon(options: IconOptions = {}): string {
   const { size = 16, className = 'product-logo', extraStyle = '' } = options;
-  const iconUrl = chrome.runtime.getURL('icons/icon-32.png');
+  const iconUrl = chrome.runtime.getURL('icons/context-drop-32.png');
   const style = extraStyle ? ` style="${extraStyle}"` : '';
   return `<img class="${className}" src="${iconUrl}" width="${size}" height="${size}" alt="ContextDrop"${style}>`;
 }
@@ -358,7 +358,7 @@ function updateCurrentAssistantCard(platform: Platform | null, isConnected: bool
   if (!platform) {
     // Show unknown state
     assistantPlatformThumb.style.background = 'rgba(0,0,0,0.05)';
-    assistantPlatformIcon.src = chrome.runtime.getURL('icons/unknown.svg');
+    assistantPlatformIcon.src = chrome.runtime.getURL('icons/platforms/unknown.svg');
     assistantPlatformIcon.alt = '未检测到';
     assistantPlatformName.textContent = '未检测到AI助手';
     assistantStatusDot.classList.remove('connected');
