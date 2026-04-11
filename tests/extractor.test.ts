@@ -4171,7 +4171,7 @@ Response: Here is the answer</div>
       const assistantMsg = messages.find(m => m.role === 'assistant');
       expect(assistantMsg).toBeDefined();
       // Thinking content should be filtered out
-      expect(assistantMsg.content).not.toContain('Thinking content');
+      expect(assistantMsg?.content).not.toContain('Thinking content');
     });
   });
 
