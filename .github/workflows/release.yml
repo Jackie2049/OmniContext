@@ -31,18 +31,18 @@ jobs:
       - name: Create distribution ZIP
         run: |
           cd dist
-          zip -r ../OmniContext-${{ github.ref_name }}.zip .
+          zip -r ../ContextDrop-${{ github.ref_name }}.zip .
           cd ..
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: OmniContext ${{ github.ref_name }}
+          name: ContextDrop ${{ github.ref_name }}
           body: |
-            ## OmniContext ${{ github.ref_name }}
+            ## ContextDrop ${{ github.ref_name }}
 
             ### 安装方法
-            1. 下载 `OmniContext-${{ github.ref_name }}.zip`
+            1. 下载 `ContextDrop-${{ github.ref_name }}.zip`
             2. 解压到任意目录
             3. 打开 Chrome，访问 `chrome://extensions/`
             4. 开启右上角的「开发者模式」
@@ -52,7 +52,7 @@ jobs:
             ### 更新日志
             请查看 [commits](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) 了解变更详情。
           files: |
-            OmniContext-${{ github.ref_name }}.zip
+            ContextDrop-${{ github.ref_name }}.zip
           draft: false
           prerelease: false
         env:
