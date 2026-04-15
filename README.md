@@ -25,11 +25,7 @@ ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以：
 
 ## 演示
 
-### 视频演示
-
-
-
-> 如果视频无法播放，请直接下载文件观看：`assets/demo_doubao-to-gemini.mp4`
+<img src="assets/demo_doubao-to-gemini.gif" width="100%" alt="ContextDrop 演示">
 
 ---
 
