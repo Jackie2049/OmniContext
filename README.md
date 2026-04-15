@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/豆包(Doubao)-Supported-ff6a00" alt="Doubao Supported">
-  <img src="https://img.shields.io/badge/元宝(Yuanbao)-Supported-00c853" alt="Yuanbao Supported">
+  <img src="https://img.shields.io/badge/豆包-Supported-ff6a00" alt="豆包 已支持">
+  <img src="https://img.shields.io/badge/元宝-Supported-00c853" alt="元宝 已支持">
   <img src="https://img.shields.io/badge/Claude-Supported-d97757?logo=anthropic" alt="Claude Supported">
   <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
   <img src="https://img.shields.io/badge/Kimi-Supported-00b0ff" alt="Kimi Supported">
@@ -283,8 +283,8 @@ npm run build
 
 | 平台 | 状态 | 备注 |
 |------|------|------|
-| 豆包 (Doubao) | ✅ | 完整支持CSS Modules解析 |
-| 元宝 (Yuanbao) | ✅ | 完整支持 |
+| 豆包 | ✅ | 完整支持CSS Modules解析 |
+| 元宝 | ✅ | 完整支持 |
 | Claude | ✅ | 完整支持 |
 | DeepSeek | ✅ | 完整支持 |
 | Kimi | ✅ | 完整支持 |
