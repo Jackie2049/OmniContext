@@ -13,7 +13,6 @@
   <img src="https://img.shields.io/badge/元宝-Supported-00c853" alt="元宝 已支持">
   <img src="https://img.shields.io/badge/Claude-Supported-d97757?logo=anthropic" alt="Claude Supported">
   <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
-  <img src="https://img.shields.io/badge/Kimi-Supported-00b0ff" alt="Kimi Supported">
   <img src="https://img.shields.io/badge/Gemini-Supported-4285f4?logo=google" alt="Gemini Supported">
   <img src="https://img.shields.io/badge/ChatGPT-Supported-10a37f?logo=openai" alt="ChatGPT Supported">
 </p>
