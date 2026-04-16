@@ -1,12 +1,4 @@
-<h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop</h1>
-
-<h4 align="center">无缝自由流转AI助手的对话记忆</h4>
-
-<p align="center">
-  <a href="https://github.com/Jackie2049/ContextDrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg?logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Chrome%20Extension-MV3-green.svg?logo=googlechrome" alt="Chrome Extension MV3">
-</p>
+<h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop：无缝流转AI助手的对话记忆</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/豆包-Supported-ff6a00" alt="豆包 已支持">
@@ -15,6 +7,12 @@
   <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
   <img src="https://img.shields.io/badge/Gemini-Supported-4285f4?logo=google" alt="Gemini Supported">
   <img src="https://img.shields.io/badge/ChatGPT-Supported-10a37f?logo=openai" alt="ChatGPT Supported">
+</p>
+
+<p align="center">
+  <a href="https://github.com/Jackie2049/ContextDrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Chrome%20Extension-MV3-green.svg?logo=googlechrome" alt="Chrome Extension MV3">
 </p>
 
 ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以：<br>
