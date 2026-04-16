@@ -23,11 +23,16 @@ ContextDrop是一款专注于**AI助手记忆管理**的浏览器插件。它可
 ✏️ **注入记忆**：按需将历史记录加入当前会话，内容支持二次编辑<br>
 🌍 **跨平台**：支持跨会话、跨平台操作，无缝流转你的AI记忆————就像AirDrop那样<br>
 
-数据本地存储，支持导出/导入，隐私安全无忧。现已适配豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手<br>
+数据本地存储，支持导出、导入，隐私安全无忧<br>
+现已适配豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手<br>
 
 ---
 
 ## 演示
+
+<p align="center">
+  <img src="assets/demo_doubao-to-gemini.gif" width="720" alt="ContextDrop 演示：跨平台流转对话记忆（豆包 → Gemini）">
+</p>
 
 ### 自动捕获会话
 
