@@ -1,5 +1,3 @@
-# ContextDrop
-
 <h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop</h1>
 
 <p align="center"><b>用于捕获和注入AI对话记录的浏览器插件</b><br><b>帮助用户在不同AI助手之间流转上下文记忆</b></p>
