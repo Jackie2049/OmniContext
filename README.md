@@ -1,9 +1,6 @@
-<h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop：无缝流转AI助手的对话记忆</h1>
+<h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop">  ContextDrop: 跨会话跨平台无缝流转你的AI记忆</h1>
 
-通过捕获和注入，帮助用户在不同AI助手之间自由流转对话上下文
-
-用于捕获和注入AI对话记录的浏览器插件
-帮助用户在不同AI助手之间流转上下文记忆
+<p align="center"><b>新建会话之后AI仿佛失忆？切换平台就丢失所有历史？ContextDrop帮你在任意会话、任意平台中流转对话记忆</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/豆包-Supported-ff6a00" alt="豆包 已支持">
@@ -20,36 +17,27 @@
   <img src="https://img.shields.io/badge/Chrome%20Extension-MV3-green.svg?logo=googlechrome" alt="Chrome Extension MV3">
 </p>
 
-ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以：<br>
-📍 自动捕获用户和AI助手之间的对话记录<br>
-📍 支持将这些历史记忆一键注入给其他AI助手<br>
-以此帮助用户在各种AI助手之间无缝流转上下文 ———— 就像AirDrop那样<br>
-🔐 数据本地存储，隐私安全无忧<br>
-🚩 现已支持豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手<br>
+ContextDrop是一款专注于**AI助手记忆管理**的浏览器插件。它可以：<br>
+
+💾 **捕获会话**：用户使用AI助手时，自动保存用户和AI助手之间的对话记忆<br> 
+✏️ **注入记忆**：按需将历史记录加入当前会话，内容支持二次编辑<br>
+🌍 **跨平台**：支持跨会话、跨平台操作，无缝流转你的AI记忆————就像AirDrop那样<br>
+
+数据本地存储，支持导出/导入，隐私安全无忧。现已适配豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手<br>
 
 ---
 
 ## 演示
 
-### 自动捕获对话记录
+### 自动捕获会话
 
-### 一键注入历史记忆
+### 一键注入记忆
 
 ### 批量捕获会话
 
 ### 导出数据
 
 ### 导入数据
-
----
-
-## 功能特性
-
-- 💾 **自动捕获** - 使用AI助手时，自动记录并保存用户和AI助手之间的对话历史
-- ✏️ **一键注入** - 选择历史会话，格式化复制到剪贴板
-- 🤖 **多平台支持** - 豆包、元宝、Claude 等主流AI助手
-- 🔒 **本地存储** - 数据仅存储在浏览器本地，隐私优先
-- 📤 **数据导出** - 支持JSON格式导出、导出会话记录
 
 ---
 
