@@ -1,37 +1,50 @@
 # ContextDrop
 
-**用于捕获和注入AI对话记录的浏览器插件**  
-**帮助用户在不同AI助手之间流转上下文记忆**
+<h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop</h1>
 
+<p align="center"><b>用于捕获和注入AI对话记录的浏览器插件</b><br><b>帮助用户在不同AI助手之间流转上下文记忆</b></p>
 
+<p align="center">
+  <a href="https://github.com/Jackie2049/ContextDrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Chrome%20Extension-MV3-green.svg?logo=googlechrome" alt="Chrome Extension MV3">
+</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/豆包-Supported-ff6a00" alt="豆包 已支持">
+  <img src="https://img.shields.io/badge/元宝-Supported-00c853" alt="元宝 已支持">
+  <img src="https://img.shields.io/badge/Claude-Supported-d97757?logo=anthropic" alt="Claude Supported">
+  <img src="https://img.shields.io/badge/DeepSeek-Supported-4d6bfa" alt="DeepSeek Supported">
+  <img src="https://img.shields.io/badge/Gemini-Supported-4285f4?logo=google" alt="Gemini Supported">
+  <img src="https://img.shields.io/badge/ChatGPT-Supported-10a37f?logo=openai" alt="ChatGPT Supported">
+</p>
 
-
-ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以：  
-
-📍 自动捕获用户和AI助手之间的对话记录  
-
-📍 支持将这些历史记忆一键注入给其他AI助手  
-
-以此帮助用户在各种AI助手之间无缝流转上下文 ———— 就像AirDrop那样  
-
-🔐 数据本地存储，隐私安全无忧  
-
-🚩 现已支持豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手  
-
-🤗 即刻安装到浏览器开始体验，从此像AirDrop一样丝滑流转AI记忆！
+ContextDrop是一款专注于AI记忆管理的浏览器插件。它可以：<br>
+📍 自动捕获用户和AI助手之间的对话记录<br>
+📍 支持将这些历史记忆一键注入给其他AI助手<br>
+以此帮助用户在各种AI助手之间无缝流转上下文 ———— 就像AirDrop那样<br>
+🔐 数据本地存储，隐私安全无忧<br>
+🚩 现已支持豆包、DeepSeek、ChatGPT、Gemini、元宝、Kimi、Claude等主流AI助手<br>
 
 ---
 
 ## 演示
 
-<img src="assets/demo_doubao-to-gemini.gif" width="100%" alt="ContextDrop 演示">
+### 自动捕获对话记录
+
+### 一键注入历史记忆
+
+### 批量捕获会话
+
+### 导出数据
+
+### 导入数据
 
 ---
 
 ## 功能特性
 
-- 💾 **自动捕获** - 访问平台时自动记录对话历史
+- 💾 **自动捕获** - 使用AI助手时，自动记录并保存用户和AI助手之间的对话历史
 - ✏️ **一键注入** - 选择历史会话，格式化复制到剪贴板
 - 🤖 **多平台支持** - 豆包、元宝、Claude 等主流AI助手
 - 🔒 **本地存储** - 数据仅存储在浏览器本地，隐私优先
