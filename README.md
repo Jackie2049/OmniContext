@@ -1,6 +1,6 @@
 <h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop"> ContextDrop</h1>
 
-<h4 align="center">用于捕获和注入AI对话记录的浏览器插件<br>帮助用户在不同AI助手之间流转上下文记忆</h4>
+<h4 align="center">无缝自由流转AI助手的对话记忆</h4>
 
 <p align="center">
   <a href="https://github.com/Jackie2049/ContextDrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
