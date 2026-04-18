@@ -1,6 +1,6 @@
 <h1 align="center"><img src="icons/context-drop.svg" width="32" height="32" alt="ContextDrop">  ContextDrop: 跨会话跨平台无缝流转你的AI记忆</h1>
 
-<p align="center"><b>新建会话之后AI仿佛失忆？切换平台就丢失所有历史？ContextDrop帮你在任意会话、任意平台中流转对话记忆</b></p>
+<p align="center"><b>新建会话后AI仿佛失忆？切换平台就丢失历史？ContextDrop帮你在任意会话、任意平台之间流转对话记忆</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/豆包-Supported-ff6a00" alt="豆包 已支持">
