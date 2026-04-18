@@ -35,15 +35,15 @@ ContextDrop是一款专注于**AI助手记忆管理**的浏览器插件。它可
 打开「自动捕获」开关，ContextDrop会自动捕获会话记录，并将AI记忆缓存到本地，无需手动操作
 
 <p align="center">
-  <video src="assets/demo_auto-capture-memory.mp4" width="720" autoplay loop muted playsinline></video>
+  <img src="assets/demo_auto-capture-memory.gif" width="720" alt="自动捕获会话演示：开启自动捕获后，ContextDrop 将对话记忆缓存到本地">
 </p>
 
 ### 一键注入记忆
 
-在ContextDrop中找到记忆卡片，点击右侧「🧠」按钮，即可将AI记忆一键注入到当前窗口，实现跨会话、跨平台流转
+找到相关记忆卡片，点击右侧「🧠」按钮，即可将AI记忆一键注入当前对话，实现跨会话、跨平台流转
 
 <p align="center">
-  <video src="assets/demo_inject-ai-memory.mp4" width="720" autoplay loop muted playsinline></video>
+  <img src="assets/demo_inject-ai-memory.gif" width="720" alt="一键注入记忆演示：点击记忆卡片「🧠」将记忆注入当前对话">
 </p>
 
 ### 批量捕获会话
