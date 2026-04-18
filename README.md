@@ -48,6 +48,13 @@ ContextDrop是一款专注于**AI助手记忆管理**的浏览器插件。它可
 
 ### 批量捕获会话
 
+点击「批量捕获」按钮，ContextDrop会扫描整个会话列表，将AI助手的所有记忆一键归档保存
+
+<p align="center">
+  <img src="assets/demo_batch-capture-memory.gif" width="720" alt="批量捕获会话演示：一键捕获多个平台的AI会话">
+</p>
+
+
 ### 导出数据
 
 ### 导入数据
